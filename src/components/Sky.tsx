@@ -2,15 +2,13 @@
 
 // 単語を意味の近さで並べた平面を、暗い背景に光る点として描く。
 // 点はタイル（/api/tiles）で見えている範囲のぶんだけ読み、よく使われる語ほど明るく、引いて見ているときから出す。
-// 検索・近い語・足し算はサーバーの API に聞く。
+// 検索と近い語はサーバーの API に聞く。
 import { useEffect, useRef, useState } from "react";
 import { MAX_LEVEL, POS_NAMES, tileIndex, visibleCount as countAt } from "@/lib/levels.ts";
 
 type Word = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
-type Panel =
-  | { kind: "word"; word: Word; neighbors: Word[]; composite?: Word[] }
-  | { kind: "arith"; query: string; parts: (Word & { sign: number })[]; results: Word[] }
-  | null;
+/** パネルに出す語と近い語。composite は、語彙にない複合語を分けた語 */
+type Panel = { word: Word; neighbors: Word[]; composite?: Word[] } | null;
 
 // 点の色: 品詞（POS_NAMES の順）
 const COLORS = [
@@ -27,7 +25,7 @@ export default function Sky() {
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
   const [about, setAbout] = useState(false);
-  const api = useRef<{ select: (w: Word, neighbors: Word[], fly: boolean) => void; showArith: (parts: Word[], ans: Word) => void } | null>(null);
+  const api = useRef<{ select: (w: Word, neighbors: Word[], fly: boolean) => void } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -74,10 +72,10 @@ export default function Sky() {
       }
     };
 
-    // 選んだ語・近い語・足し算の語（タイルを読む前でも位置が分かるように、API の結果をそのまま持つ）
+    // 選んだ語と近い語（タイルを読む前でも位置が分かるように、API の結果をそのまま持つ）
     let marks: Word[] = [];
     let selected: Word | null = null;
-    let lines: [Word, Word, boolean][] = [];
+    let lines: [Word, Word][] = [];
     /** 選んだ語の目印を薄くして消し始めた時刻（冒頭の「猫」を消すとき）。null なら消していない */
     let fadeStart: number | null = null;
     const FADE_MS = 800;
@@ -109,9 +107,9 @@ export default function Sky() {
       // 線
       ctx.globalAlpha = fade;
       ctx.lineWidth = 1.1;
-      for (const [a, b, dashed] of lines) {
+      ctx.setLineDash([3, 5]);
+      for (const [a, b] of lines) {
         const [ax, ay] = toScreen(a.x, a.y), [bx, by] = toScreen(b.x, b.y);
-        ctx.setLineDash(dashed ? [3, 5] : []);
         ctx.strokeStyle = "rgba(255,210,122,0.7)";
         ctx.beginPath();
         ctx.moveTo(ax, ay);
@@ -252,19 +250,8 @@ export default function Sky() {
         fadeStart = null;
         selected = w;
         marks = [w, ...neighbors];
-        lines = neighbors.map((n) => [w, n, true]);
+        lines = neighbors.map((n) => [w, n]);
         if (fly) flyTo(w.x, w.y, focusScale(w, neighbors));
-      },
-      showArith(parts, ans) {
-        fadeStart = null;
-        selected = ans;
-        marks = [...parts, ans];
-        const seq = [...parts, ans];
-        lines = seq.slice(1).map((b, k) => [seq[k], b, false]);
-        const xs = seq.map((p) => p.x), ys = seq.map((p) => p.y);
-        const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 0.001);
-        const s = Math.min(fitScale() * 400, Math.max(fitScale() * 2, (Math.min(W, H) * 0.6) / span));
-        flyTo((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, s, 1800);
       },
     };
 
@@ -333,7 +320,7 @@ export default function Sky() {
         .then((d) => {
           if (d.error) return;
           api.current?.select(d.word, d.neighbors, false);
-          setPanel({ kind: "word", word: d.word, neighbors: d.neighbors });
+          setPanel({ word: d.word, neighbors: d.neighbors });
         });
     };
     canvas.onwheel = (e) => {
@@ -366,17 +353,10 @@ export default function Sky() {
 
   const search = async (text: string) => {
     setMsg("");
-    if (/[+＋]|\s[-－−]\s/.test(text)) {
-      const d = await fetch(`/api/arith?q=${encodeURIComponent(text)}`).then((r) => r.json());
-      if (d.error) return setMsg(d.error);
-      api.current?.showArith(d.parts, d.results[0]);
-      setPanel({ kind: "arith", query: text, parts: d.parts, results: d.results });
-      return;
-    }
     const d = await fetch(`/api/word?w=${encodeURIComponent(text)}`).then((r) => r.json());
     if (d.error) return setMsg(d.error);
     api.current?.select(d.word, d.neighbors, true);
-    setPanel({ kind: "word", word: d.word, neighbors: d.neighbors, composite: d.composite });
+    setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite });
   };
 
   const pick = (w: Word) => {
@@ -385,7 +365,7 @@ export default function Sky() {
       .then((d) => {
         if (d.error) return;
         api.current?.select(d.word, d.neighbors, true);
-        setPanel({ kind: "word", word: d.word, neighbors: d.neighbors });
+        setPanel({ word: d.word, neighbors: d.neighbors });
       });
   };
 
@@ -405,43 +385,21 @@ export default function Sky() {
       </header>
       {panel && (
         <div className="panel">
-          {panel.kind === "word" ? (
-            <>
-              {panel.composite && <div className="kind">{panel.composite.map((w) => w.text).join(" ＋ ")} に近い語</div>}
-              <h2>{panel.word.text}</h2>
-              <dl>
-                <dt>頻度順位</dt>
-                <dd>#{panel.word.rank.toLocaleString()}</dd>
-                <dt>品詞</dt>
-                <dd>{posName(panel.word.pos)}</dd>
-              </dl>
-              <h3>意味の近い語</h3>
-              {panel.neighbors.map((w) => (
-                <button key={w.id} onClick={() => pick(w)}>
-                  {w.text}
-                  <span>{w.score?.toFixed(2)}</span>
-                </button>
-              ))}
-            </>
-          ) : (
-            <>
-              <div className="kind">{panel.query} の答え</div>
-              <h2>{panel.results[0].text}</h2>
-              <dl>
-                <dt>頻度順位</dt>
-                <dd>#{panel.results[0].rank.toLocaleString()}</dd>
-                <dt>品詞</dt>
-                <dd>{posName(panel.results[0].pos)}</dd>
-              </dl>
-              <h3>ほかの候補</h3>
-              {panel.results.map((w) => (
-                <button key={w.id} onClick={() => pick(w)}>
-                  {w.text}
-                  <span>{w.score?.toFixed(2)}</span>
-                </button>
-              ))}
-            </>
-          )}
+          {panel.composite && <div className="kind">{panel.composite.map((w) => w.text).join(" ＋ ")} に近い語</div>}
+          <h2>{panel.word.text}</h2>
+          <dl>
+            <dt>頻度順位</dt>
+            <dd>#{panel.word.rank.toLocaleString()}</dd>
+            <dt>品詞</dt>
+            <dd>{posName(panel.word.pos)}</dd>
+          </dl>
+          <h3>意味の近い語</h3>
+          {panel.neighbors.map((w) => (
+            <button key={w.id} onClick={() => pick(w)}>
+              {w.text}
+              <span>{w.score?.toFixed(2)}</span>
+            </button>
+          ))}
         </div>
       )}
       <div className="legend">
@@ -461,7 +419,7 @@ export default function Sky() {
       {msg && <div className="msg">{msg}</div>}
       <div className="bar">
         <input
-          placeholder="語で検索（例: 猫）／ 足し算（例: 夏 - 暑い + 寒い）"
+          placeholder="語で検索（例: 深夜ラジオ）"
           autoComplete="off"
           onKeyDown={(e) => {
             if (e.key !== "Enter" || e.nativeEvent.isComposing) return;

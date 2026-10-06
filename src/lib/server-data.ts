@@ -3,13 +3,25 @@ import fs from "node:fs";
 import path from "node:path";
 import { IvfPq } from "./ivfpq.ts";
 
-export type Meta = { word: string[]; display: string[]; pos: number[]; x: number[]; y: number[]; rank: number[]; hidden: number[] };
+export type Meta = {
+  word: string[];
+  display: string[];
+  pos: number[];
+  x: number[];
+  y: number[];
+  rank: number[];
+  hidden: number[];
+  /** 検索用の別名（読み、ひらがなを含む別の書き方）→ 語の番号 */
+  alias: Record<string, number>;
+};
 
 export type Lexicon = {
   meta: Meta;
   index: IvfPq;
   /** 書き方（正規化表記・普段の書き方のどちらでも）→ 語の番号 */
   byText: Map<string, number>;
+  /** 別名（読み、ひらがなを含む別の書き方）→ 語の番号 */
+  byAlias: Map<string, number>;
   /** 隠す語（不適切な言葉）。検索結果に出さない */
   hiddenIds: Set<number>;
   /** 複合語を分けるときの、一番長い語の文字数 */
@@ -39,7 +51,9 @@ export function getLexicon(): Lexicon {
         maxLen = Math.max(maxLen, t.length);
       }
     });
-    g.__goiLexicon = { meta, index, byText, hiddenIds, maxLen: Math.min(maxLen, 20) };
+    const byAlias = new Map(Object.entries(meta.alias));
+    for (const t of byAlias.keys()) maxLen = Math.max(maxLen, t.length);
+    g.__goiLexicon = { meta, index, byText, byAlias, hiddenIds, maxLen: Math.min(maxLen, 20) };
   }
   return g.__goiLexicon;
 }

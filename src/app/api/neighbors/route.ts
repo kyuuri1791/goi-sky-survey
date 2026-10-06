@@ -9,5 +9,5 @@ export async function GET(request: NextRequest) {
   if (!Number.isInteger(id) || id < 0 || id >= meta.word.length || hiddenIds.has(id)) {
     return Response.json({ error: "番号が正しくありません" }, { status: 400 });
   }
-  return Response.json({ word: info(id), neighbors: nearest(combine([{ id, sign: 1 }]), 8, [id]) });
+  return Response.json({ word: info(id), neighbors: nearest(combine([id]), 8, [id]) });
 }

@@ -6,6 +6,7 @@
 // （かなの方がよく使われる）ときに限って戻す。突然・特に・必ず のように普段漢字で書く言葉はそのまま残る。
 // 出力: data-src/surface.json（正規化表記 → 書き方。同じなら入れない）
 //       data-src/pos.json（正規化表記 → 品詞の大分類。点の色に使う）
+//       data-src/alias.json（正規化表記 → { reading: 読み（ひらがな）, variants: ひらがなを含む別の書き方 }。検索で使う）
 // 出典: SudachiDict（Works Applications, Apache License 2.0）
 import fs from "node:fs";
 import readline from "node:readline";
@@ -16,9 +17,13 @@ const KANA_WORDS = new Set([
   "頂く", "見える", "良い", "宜しい", "居らっしゃる", "仰る", "御座います", "事", "物", "所", "為", "訳", "筈", "侭", "様", "達",
 ]);
 
+/** カタカナをひらがなにする（辞書の読みはカタカナ） */
+const toHira = (s) => s.replace(/[\u30a1-\u30f6]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
 const info = new Map(); // 正規化表記 → { pos, cost: Map(書き方 → 一番小さいコスト) }
 const posOf = new Map(); // 正規化表記 → 品詞の大分類（名詞は固有名詞かどうかも見る）
-// 品詞は、同じ語の見出しのうち一番よく使われるもの（正規化表記と同じ書き方の見出しで、コストが一番小さいもの）から決める。
+const readingOf = new Map(); // 正規化表記 → 読み（ひらがな）
+const variantsOf = new Map(); // 正規化表記 → ひらがなを含む別の書き方（ごはん、朝ごはん）
+// 品詞と読みは、同じ語の見出しのうち一番よく使われるもの（正規化表記と同じ書き方の見出しで、コストが一番小さいもの）から決める。
 // 「円」は普通名詞のほかに人名・地名の見出しもあるので、どれか 1 つを適当に選ぶと固有名詞になってしまう。
 // コストはよく使われる語ほど小さい（負のこともある）。ちょうど 0 の見出しはコストが付いていない（core_lex.csv の全部と、small_lex.csv の記号など）ので比べられない。
 // small_lex.csv にある語はそちらを優先し、コスト 0 の見出しは後回しにする
@@ -30,10 +35,15 @@ for (const [fileIndex, file] of ["data-src/small_lex.csv", "data-src/core_lex.cs
     const c = line.split(",");
     if (c.length < 13) continue;
     const [surface, cost, pos1, conjType, conjForm, norm] = [c[4], Number(c[3]), c[5], c[9], c[10], c[12]];
+    if (fileIndex === 0 && surface !== norm && /\p{Script=Hiragana}/u.test(surface)) {
+      if (!variantsOf.has(norm)) variantsOf.set(norm, new Set());
+      variantsOf.get(norm).add(surface);
+    }
     const rank = [fileIndex, surface === norm ? 0 : 1, cost !== 0 ? cost : Infinity];
     if (!posRank.has(norm) || better(rank, posRank.get(norm)) < 0) {
       posRank.set(norm, rank);
       posOf.set(norm, pos1 === "名詞" && c[6] === "固有名詞" ? "固有名詞" : pos1);
+      readingOf.set(norm, toHira(c[11]));
     }
     if (!(conjForm === "*" || conjForm === "終止形-一般") || conjType.startsWith("文語")) continue;
     let e = info.get(norm);
@@ -82,6 +92,10 @@ for (const w of words) {
 for (const w of KEEP) delete map[w];
 Object.assign(map, OVERRIDE);
 fs.writeFileSync("data-src/surface.json", JSON.stringify(map));
+fs.writeFileSync(
+  "data-src/alias.json",
+  JSON.stringify(Object.fromEntries(words.filter((w) => readingOf.has(w) || variantsOf.has(w)).map((w) => [w, { reading: readingOf.get(w), variants: [...(variantsOf.get(w) ?? [])] }]))),
+);
 fs.writeFileSync("data-src/pos.json", JSON.stringify(Object.fromEntries(words.map((w) => [w, posOf.get(w) ?? "その他"]))));
 const changed = words.slice(0, 21060).filter((w) => map[w]);
 console.log(`書き方が変わる単語: 全体 ${Object.keys(map).length} 語、よく使われる約 2 万語のうち ${changed.length} 語`);

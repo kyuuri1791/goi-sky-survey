@@ -11,14 +11,15 @@ export function info(id: number, score?: number): WordInfo {
 }
 
 /**
- * 入力の文字列を語の番号の列にする。そのまま語彙にあればその語、なければ語彙にある語で前から一番長く切っていく
- * （「家系ラーメン」→「家系」「ラーメン」）。切れない文字が残れば null
+ * 入力の文字列を語の番号の列にする。そのまま語彙にあればその語（書き方、別名の順に探す）、
+ * なければ語彙にある語で前から一番長く切っていく（「家系ラーメン」→「家系」「ラーメン」）。切れない文字が残れば null。
+ * 切るときの別名は 3 文字以上に限る（「冬のこたつ」の「のこ」が「野小」になったりしないように）
  */
 export function resolve(text: string): number[] | null {
-  const { byText, maxLen } = getLexicon();
+  const { byText, byAlias, maxLen } = getLexicon();
   const t = text.trim();
   if (!t) return null;
-  const whole = byText.get(t);
+  const whole = byText.get(t) ?? byAlias.get(t);
   if (whole !== undefined) return [whole];
   const out: number[] = [];
   let i = 0;
@@ -26,7 +27,8 @@ export function resolve(text: string): number[] | null {
     let found = -1;
     let len = 0;
     for (let l = Math.min(maxLen, t.length - i); l >= 1; l--) {
-      const id = byText.get(t.slice(i, i + l));
+      const part = t.slice(i, i + l);
+      const id = byText.get(part) ?? (l >= 3 ? byAlias.get(part) : undefined);
       if (id !== undefined) {
         found = id;
         len = l;
@@ -40,13 +42,13 @@ export function resolve(text: string): number[] | null {
   return out;
 }
 
-/** 語の番号の列（符号つき）のベクトルを足し合わせる */
-export function combine(parts: { id: number; sign: number }[]): Float32Array {
+/** 語の番号の列のベクトルを足し合わせる */
+export function combine(ids: number[]): Float32Array {
   const { index } = getLexicon();
   const v = new Float32Array(index.dim);
-  for (const { id, sign } of parts) {
+  for (const id of ids) {
     const w = index.vector(id);
-    for (let d = 0; d < v.length; d++) v[d] += sign * w[d];
+    for (let d = 0; d < v.length; d++) v[d] += w[d];
   }
   return v;
 }

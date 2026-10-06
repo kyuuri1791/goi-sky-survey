@@ -69,7 +69,7 @@ header button.link {
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
-  width: min(560px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 32px));
 }
 .bar input {
   width: 100%;
@@ -80,6 +80,7 @@ header button.link {
   background: var(--panel);
   color: var(--fg);
   font-size: 16px;
+  text-align: center;
   outline: none;
 }
 .bar input:focus {
