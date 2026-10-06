@@ -1,0 +1,234 @@
+:root {
+  --fg: #dfe6f3;
+  --muted: #7f8aa3;
+  --accent: #ffd27a;
+  --line: #1e2742;
+  --panel: rgba(8, 11, 22, 0.86);
+  --mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #03050b;
+  color: var(--fg);
+  overflow: hidden;
+  font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+canvas.sky {
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+  touch-action: none;
+  cursor: crosshair;
+}
+header {
+  position: fixed;
+  left: 16px;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  pointer-events: none;
+}
+header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+/* 狭い画面では、名前の途中ではなく（β版）の前で折り返し、それでも入らなければボタンを次の行に送る */
+header {
+  flex-wrap: wrap;
+}
+header h1 span {
+  display: inline-block;
+}
+button.link {
+  all: unset;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: var(--panel);
+}
+button.link:hover {
+  color: var(--fg);
+}
+/* button.link の all: unset で、見出しの帯の pointer-events: none を受け継いでしまうので戻す */
+header button.link {
+  pointer-events: auto;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+}
+.bar input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 16px;
+  outline: none;
+}
+.bar input:focus {
+  border-color: #3d4a75;
+}
+.panel {
+  position: fixed;
+  right: 16px;
+  top: 52px;
+  width: 270px;
+  max-height: calc(100dvh - 140px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.panel h2 {
+  margin: 2px 0 8px;
+  font-size: 22px;
+  color: var(--accent);
+}
+.panel .kind {
+  font-size: 11px;
+  color: var(--muted);
+}
+.panel dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0 0 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.panel dt {
+  color: var(--muted);
+}
+.panel dd {
+  margin: 0;
+}
+.panel h3 {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  margin: 10px 0 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.panel button {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 2px 0;
+}
+.panel button:hover {
+  color: var(--accent);
+}
+.panel button span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.legend {
+  position: fixed;
+  left: 16px;
+  bottom: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.legend .title {
+  color: var(--fg);
+  font-weight: 600;
+}
+.legend b {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.msg {
+  position: fixed;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: 12px;
+  text-shadow: 0 0 8px #000;
+  white-space: nowrap;
+}
+.about {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 3, 8, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.about .box {
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: #080b16;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px 22px;
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+.about h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.about h3 {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.about p {
+  margin: 0 0 8px;
+}
+.about .mono {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  header h1 {
+    font-size: 15px;
+    letter-spacing: 0.06em;
+  }
+  .legend {
+    display: none;
+  }
+  .panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    top: auto;
+    bottom: 74px;
+    max-height: 40dvh;
+  }
+}
