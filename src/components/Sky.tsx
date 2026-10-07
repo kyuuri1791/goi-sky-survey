@@ -124,7 +124,8 @@ export default function Sky({ home }: { home: HomeView }) {
       hitLabels = [];
       const vis = visibleCount();
       const markIds = new Set(marks.map((m) => m.id));
-      const labelMax = 40 * z ** 1.7;
+      // 名前を出す語の数（よく使われる順）。全体を見ているとき（拡大率 1）は出さず、拡大するにつれて増やす
+      const labelMax = 40 * (z ** 1.7 - 1);
       const taken = new Set<string>();
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
