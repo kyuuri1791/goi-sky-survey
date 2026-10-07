@@ -342,10 +342,10 @@ export default function Sky() {
       api.current?.select(d.word, d.neighbors, false);
       requestAnimationFrame(loop);
       setTimeout(() => {
-        flyTo(0, 0, fitScale(), 4500);
+        flyTo(0, 0, fitScale(), 3000);
         // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
         if (selected?.id === d.word.id) fadeStart = performance.now();
-      }, 2800);
+      }, 1500);
     })();
 
     return () => {
