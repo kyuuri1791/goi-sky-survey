@@ -9,7 +9,8 @@ import faiss
 import numpy as np
 from faiss.contrib.inspect_tools import get_invlist
 
-NLIST, M, KS = 1024, 50, 256
+# M: 1 語の要約のバイト数。複合語の問い合わせで、50 だと本物の上位 9 語の 68%、100 だと 85% を当てる（メモリは約 20MB 増える）
+NLIST, M, KS = 1024, 100, 256
 MAGIC = 0x31515649  # "IVQ1"
 
 

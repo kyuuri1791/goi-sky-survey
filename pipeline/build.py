@@ -10,6 +10,7 @@
 
   python -m build             全部作る
   python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/meta.json のまま）
+  python -m build index       索引だけ作り直す（配置は変えない）
   python -m build neighbors   近い語の表だけ作り直す（配置は変えない）
 """
 
@@ -60,6 +61,10 @@ def main() -> None:
     if sys.argv[1:] == ["neighbors"]:
         neighbors.write(vecs, OUT, log)
         log("近い語")
+        return
+    if sys.argv[1:] == ["index"]:
+        index.write(index.build(vecs), *vecs.shape, OUT)
+        log("索引")
         return
 
     surf, pos, alias = analyze(words)

@@ -78,7 +78,7 @@ export class IvfPq {
    * q に意味の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。
    * score は q との cos 類似度の見積もり
    */
-  search(q: Float32Array, k: number, exclude: Set<number> = new Set(), nprobe = 32): Hit[] {
+  search(q: Float32Array, k: number, exclude: Set<number> = new Set(), nprobe = 64): Hit[] {
     const { dim, nlist, m, ks, sub } = this;
     // 1. 近いグループ
     const cs = new Float32Array(nlist);

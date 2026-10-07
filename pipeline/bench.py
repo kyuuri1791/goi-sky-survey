@@ -7,7 +7,7 @@ import ngcrypt
 import sources
 from vocab import kept_ids
 
-K, NPROBE, QUERIES = 10, 32, 200
+K, NPROBE, QUERIES = 10, 64, 200
 
 
 def load_index(out="/out"):
