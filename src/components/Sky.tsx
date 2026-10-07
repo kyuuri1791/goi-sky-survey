@@ -124,8 +124,9 @@ export default function Sky({ home }: { home: HomeView }) {
       hitLabels = [];
       const vis = visibleCount();
       const markIds = new Set(marks.map((m) => m.id));
-      // 名前を出す語の数（よく使われる順）。全体を見ているとき（拡大率 1）は出さず、拡大するにつれて増やす
-      const labelMax = 40 * (z ** 1.7 - 1);
+      // 名前を出す語の数（よく使われる順）。全体を見ているとき（拡大率 1）は出さず、拡大するにつれて増やす。
+      // 窓の大きさを変えると拡大率が 1 から少しずれるので、1.3 倍ほどまでは出さない
+      const labelMax = 40 * Math.max(0, z ** 1.7 - 1.5);
       const taken = new Set<string>();
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
@@ -220,8 +221,12 @@ export default function Sky({ home }: { home: HomeView }) {
       };
     };
 
-    /** 最初の範囲（home）に戻る。選んでいる語の目印は残す */
-    const goHome = () => flyTo(home.x, home.y, fitScale(), 1200);
+    /** 最初の範囲（home）に戻る。選んでいる語の目印は薄くして消し、パネルも閉じる */
+    const goHome = () => {
+      flyTo(home.x, home.y, fitScale(), 1200);
+      if (selected) fadeStart = performance.now();
+      setPanel(null);
+    };
     /** 冒頭の演出が終わったか。終わるまでは「全体を表示」を出さない */
     let introDone = false;
     let awayNow = false;
