@@ -1,6 +1,6 @@
 import "server-only";
 import { MAX_LEVEL, levelOf, tileIndex } from "./levels.ts";
-import { getLexicon } from "./server-data.ts";
+import { getHiddenIds, getMeta } from "./server-data.ts";
 
 /** ブラウザに送る点: [x, y, id, 品詞, 表示] */
 export type TilePoint = [number, number, number, number, string];
@@ -15,7 +15,7 @@ const key = (level: number, tx: number, ty: number) => `${level}/${tx}/${ty}`;
  */
 function buckets(): Map<string, number[]> {
   if (!g.__goiTiles) {
-    const { meta, hiddenIds } = getLexicon();
+    const meta = getMeta(), hiddenIds = getHiddenIds();
     const map = new Map<string, number[]>();
     for (let id = 0; id < meta.word.length; id++) {
       if (hiddenIds.has(id)) continue;
@@ -34,6 +34,6 @@ function buckets(): Map<string, number[]> {
 export function tile(level: number, tx: number, ty: number): TilePoint[] | null {
   const size = 2 ** level;
   if (![level, tx, ty].every(Number.isInteger) || level < 0 || level > MAX_LEVEL || tx < 0 || ty < 0 || tx >= size || ty >= size) return null;
-  const { meta } = getLexicon();
+  const meta = getMeta();
   return (buckets().get(key(level, tx, ty)) ?? []).map((id) => [meta.x[id], meta.y[id], id, meta.pos[id], meta.display[id]]);
 }

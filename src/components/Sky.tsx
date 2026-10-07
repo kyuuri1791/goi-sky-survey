@@ -388,6 +388,8 @@ export default function Sky({ home }: { home: HomeView }) {
 
     // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
     (async () => {
+      // 全体のよく使われる語が入ったタイルは、「猫」の答えを待たずに読み始めておく
+      void loadTile("0/0/0");
       const d = await fetch("/api/word?w=猫").then((r) => r.json());
       if (disposed) return;
       view.x = d.word.x;

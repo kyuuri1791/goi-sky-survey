@@ -15,55 +15,54 @@ export type Meta = {
   alias: Record<string, number>;
 };
 
-export type Lexicon = {
-  meta: Meta;
-  index: IvfPq;
-  /** 書き方（正規化表記・普段の書き方のどちらでも）→ 語の番号 */
-  byText: Map<string, number>;
-  /** 別名（読み、ひらがなを含む別の書き方）→ 語の番号 */
-  byAlias: Map<string, number>;
-  /** 隠す語（不適切な言葉）。検索結果に出さない */
-  hiddenIds: Set<number>;
-  /** 複合語を分けるときの、一番長い語の文字数 */
-  maxLen: number;
-  /** 前もって計算した近い語（語ごとに NEIGHBORS 個、近い順）と、その近さ × 10000 */
-  neighborIds: Uint32Array;
-  neighborScores: Int16Array;
-};
-
 /** neighbors.bin に入っている、語ごとの近い語の数（pipeline/neighbors.py の K） */
 export const NEIGHBORS = 8;
+/** 複合語を分けるときに試す、一番長い語の文字数 */
+export const MAX_PART_LEN = 20;
 
-const g = globalThis as { __goiLexicon?: Lexicon };
+const DIR = path.join(process.cwd(), "data");
+const g = globalThis as { __goi?: Map<string, unknown> };
+const cache = (g.__goi ??= new Map());
 
-/** 単語の情報と検索の索引。最初に呼ばれたときに読み込んで、以後は使い回す */
-export function getLexicon(): Lexicon {
-  if (!g.__goiLexicon) {
-    const dir = path.join(process.cwd(), "data");
-    const meta = JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")) as Meta;
-    const index = new IvfPq(path.join(dir, "index.bin"));
-    const byText = new Map<string, number>();
-    const hiddenIds = new Set<number>();
-    let maxLen = 1;
-    meta.word.forEach((w, id) => {
-      if (meta.hidden[id]) {
-        hiddenIds.add(id);
-        return;
-      }
-      // よく使われる方（番号の小さい方）を優先する
-      for (const t of [w, meta.display[id]]) {
-        if (!byText.has(t)) byText.set(t, id);
-        maxLen = Math.max(maxLen, t.length);
-      }
-    });
-    const byAlias = new Map(Object.entries(meta.alias));
-    for (const t of byAlias.keys()) maxLen = Math.max(maxLen, t.length);
-    // 近い語の表: 番号（u32）の並びのあとに近さ（i16）の並び
-    const nb = fs.readFileSync(path.join(dir, "neighbors.bin"));
-    const count = meta.word.length * NEIGHBORS;
-    const neighborIds = new Uint32Array(nb.buffer.slice(nb.byteOffset, nb.byteOffset + count * 4));
-    const neighborScores = new Int16Array(nb.buffer.slice(nb.byteOffset + count * 4, nb.byteOffset + count * 6));
-    g.__goiLexicon = { meta, index, byText, byAlias, hiddenIds, maxLen: Math.min(maxLen, 20), neighborIds, neighborScores };
-  }
-  return g.__goiLexicon;
+/**
+ * 最初に呼ばれたときに make で作り、以後は使い回す。
+ * データは要る分だけ読む（デプロイ先ではしばらく使わないとサーバーが止まり、次の最初の要求で全部読み直すので、
+ * タイルだけの要求なら単語の情報だけ、というように、起動直後にかかる時間を短くする）
+ */
+function once<T>(key: string, make: () => T): () => T {
+  return () => {
+    if (!cache.has(key)) cache.set(key, make());
+    return cache.get(key) as T;
+  };
 }
+
+/** 単語の情報（data/meta.json） */
+export const getMeta = once("meta", () => JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8")) as Meta);
+
+/** 隠す語（不適切な言葉）。検索結果に出さない */
+export const getHiddenIds = once("hidden", () => new Set(getMeta().hidden.flatMap((h, id) => (h ? [id] : []))));
+
+/** 書き方（正規化表記・普段の書き方のどちらでも）→ 語の番号。よく使われる方（番号の小さい方）を優先する */
+export const getByText = once("byText", () => {
+  const { word, display, hidden } = getMeta();
+  const byText = new Map<string, number>();
+  word.forEach((w, id) => {
+    if (hidden[id]) return;
+    if (!byText.has(w)) byText.set(w, id);
+    if (!byText.has(display[id])) byText.set(display[id], id);
+  });
+  return byText;
+});
+
+/** 前もって計算した近い語（語ごとに NEIGHBORS 個、近い順）と、その近さ × 10000。番号（u32）の並びのあとに近さ（i16）の並び */
+export const getNeighbors = once("neighbors", () => {
+  const nb = fs.readFileSync(path.join(DIR, "neighbors.bin"));
+  const count = getMeta().word.length * NEIGHBORS;
+  return {
+    ids: new Uint32Array(nb.buffer.slice(nb.byteOffset, nb.byteOffset + count * 4)),
+    scores: new Int16Array(nb.buffer.slice(nb.byteOffset + count * 4, nb.byteOffset + count * 6)),
+  };
+});
+
+/** 意味の近い語を探す索引（複合語の検索だけで使う） */
+export const getIndex = once("index", () => new IvfPq(path.join(DIR, "index.bin")));
