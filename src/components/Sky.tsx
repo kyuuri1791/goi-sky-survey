@@ -290,11 +290,34 @@ export default function Sky({ home }: { home: HomeView }) {
     // ドラッグ・ホイール・ピンチ・タップ
     const pointers = new Map<number, [number, number]>();
     let moved = 0, pinch = 0;
+    /** 画面の真ん中（縦横それぞれ中央の半分）に描いている点の数（MIN_STARS まで数えたら打ち切る） */
+    const MIN_STARS = 40;
+    const starsInCenter = () => {
+      const vis = visibleCount();
+      const [x0, y0] = toData(W / 4, H / 4), [x1, y1] = toData((W * 3) / 4, (H * 3) / 4);
+      let count = 0;
+      for (const p of pts) {
+        if (p.id > vis) break;
+        if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && ++count >= MIN_STARS) break;
+      }
+      return count;
+    };
+    /**
+     * 画面の真ん中の点が MIN_STARS より少ないときは、点が増える向きか、語の集まりの中心（home）に近づく向きにしか動かさない
+     * （何もない所へいくらでも行けてしまわないように）。戻る向きにはいつでも動かせるので、急に引き戻すことはない
+     */
+    const limitMove = (fromX: number, fromY: number, before: number) => {
+      const after = starsInCenter();
+      const dist = (x: number, y: number) => Math.hypot(x - home.x, y - home.y);
+      if (after < MIN_STARS && after <= before && dist(view.x, view.y) > dist(fromX, fromY)) [view.x, view.y] = [fromX, fromY];
+    };
     const zoomAt = (f: number, sx: number, sy: number) => {
+      const [fromX, fromY, before] = [view.x, view.y, starsInCenter()];
       const [dx, dy] = toData(sx, sy);
       view.s = Math.min(fitScale() * 600, Math.max(fitScale() * 0.5, view.s * f));
       view.x = dx - (sx - W / 2) / view.s;
       view.y = dy - (sy - H / 2) / view.s;
+      limitMove(fromX, fromY, before);
     };
     canvas.onpointerdown = (e) => {
       canvas.setPointerCapture(e.pointerId);
@@ -315,8 +338,10 @@ export default function Sky({ home }: { home: HomeView }) {
         moved += 10;
         return;
       }
+      const [fromX, fromY, before] = [view.x, view.y, starsInCenter()];
       view.x -= (cur[0] - p[0]) / view.s;
       view.y -= (cur[1] - p[1]) / view.s;
+      limitMove(fromX, fromY, before);
       moved += Math.abs(cur[0] - p[0]) + Math.abs(cur[1] - p[1]);
     };
     canvas.onpointerup = (e) => {

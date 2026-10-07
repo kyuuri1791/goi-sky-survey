@@ -72,7 +72,7 @@ npm run data:bench   # 作った索引の精度を測る
 
 NGリストで不適切な言葉を除外しています。リストの中身は公開しないため、暗号化した `pipeline/ng.enc` だけをリポジトリに入れています。
 
-暗号は AES-256-GCM で、鍵は git に入れない `pipeline/.env` の `NG_KEY` から読みます（`pipeline/ngcrypt.py`）。データを作るときは、コンテナの中でメモリ上に復号して使うので、平文の一覧がディスクに出ることはありません。
+暗号は AES-256-GCM で、鍵は git に入れない `pipeline/.env` の `NG_KEY` から読みます（`pipeline/ngcrypt.py`）。
 
 ```bash
 npm run ng:edit      # 復号してエディタで開き、保存すると暗号化し直す（そのあと pipeline/ng.enc をコミットする）
