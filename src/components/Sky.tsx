@@ -4,7 +4,7 @@
 // 点はタイル（/api/tiles）で見えている範囲のぶんだけ読み、よく使われる語ほど明るく、引いて見ているときから出す。
 // 検索と近い語はサーバーの API に聞く。
 import { useEffect, useRef, useState } from "react";
-import { MAX_LEVEL, POS_NAMES, tileIndex, visibleCount as countAt } from "@/lib/levels.ts";
+import { MAX_LEVEL, POS_NAMES, tileIndex, visibleCount as countAt, type HomeView } from "@/lib/levels.ts";
 
 type Word = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
 /** パネルに出す語と近い語。composite は、語彙にない複合語を分けた語 */
@@ -22,7 +22,8 @@ const COLORS = [
 ];
 const posColor = (pos: number) => `rgb(${COLORS[pos] ?? COLORS[5]})`;
 
-export default function Sky() {
+/** home: 最初に見せる範囲（よく使われる語が集まっている所） */
+export default function Sky({ home }: { home: HomeView }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
@@ -55,7 +56,8 @@ export default function Sky() {
       pts.sort((a, b) => a.id - b.id);
     };
 
-    const fitScale = () => Math.min(W, H) * 0.46;
+    // 拡大率 1 = 最初に見せる範囲（home）が画面に収まる大きさ。縦横それぞれ合わせて、小さい方にする
+    const fitScale = () => Math.min((W * 0.46) / home.rx, (H * 0.46) / home.ry);
     const view = { x: 0, y: 0, s: 1 };
     const toScreen = (x: number, y: number) => [W / 2 + (x - view.x) * view.s, H / 2 + (y - view.y) * view.s];
     const toData = (sx: number, sy: number) => [view.x + (sx - W / 2) / view.s, view.y + (sy - H / 2) / view.s];
@@ -337,7 +339,7 @@ export default function Sky() {
       api.current?.select(d.word, d.neighbors, false);
       requestAnimationFrame(loop);
       setTimeout(() => {
-        flyTo(0, 0, fitScale(), 3000);
+        flyTo(home.x, home.y, fitScale(), 3000);
         // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
         if (selected?.id === d.word.id) fadeStart = performance.now();
       }, 1500);
@@ -347,7 +349,7 @@ export default function Sky() {
       disposed = true;
       removeEventListener("resize", resize);
     };
-  }, []);
+  }, [home]);
 
   const search = async (text: string) => {
     setMsg("");

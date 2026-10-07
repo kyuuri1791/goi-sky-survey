@@ -23,3 +23,6 @@ export const tileIndex = (v: number, level: number) => {
   const g = 2 ** level;
   return Math.max(0, Math.min(g - 1, Math.floor(((v + 1) / 2) * g)));
 };
+
+/** 最初に見せる範囲: よく使われる語が集まっている所の中心と、そこから縦横それぞれどこまでか（平面の座標） */
+export type HomeView = { x: number; y: number; rx: number; ry: number };
