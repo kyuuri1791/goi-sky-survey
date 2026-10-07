@@ -84,7 +84,6 @@ export default function Sky() {
     // 直前のフレームで描いた点と名前の位置（タップでどの語を選ぶか決めるのに使う）
     let hitDots: { x: number; y: number; a: number; id: number }[] = [];
     let hitLabels: { x: number; y: number; w: number; h: number; id: number }[] = [];
-    const dust = Array.from({ length: 900 }, () => [Math.random(), Math.random(), Math.random() * 0.5]);
 
     const draw = (t: number) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -93,10 +92,6 @@ export default function Sky() {
       bg.addColorStop(1, "#02030a");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
-      for (const [x, y, a] of dust) {
-        ctx.fillStyle = `rgba(200,210,255,${a * 0.4})`;
-        ctx.fillRect(x * W, y * H, 1, 1);
-      }
       const z = zoom();
       // 目印を消している途中なら薄くし、消し終わったら外す
       const fade = fadeStart === null ? 1 : Math.max(0, 1 - (performance.now() - fadeStart) / FADE_MS);
