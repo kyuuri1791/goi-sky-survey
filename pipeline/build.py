@@ -6,7 +6,7 @@
   4. UMAP で 2 次元に並べる
   5. IVF-PQ の索引を作る
   6. 全部の語の近い語を計算する
-  7. /out（= data/）に index.bin、rerank-*.bin、neighbors.bin、meta.json を書き出す
+  7. /out（= data/）に index.bin、neighbors.bin、meta.json を書き出す
 
   python -m build             全部作る
   python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/meta.json のまま）
@@ -77,7 +77,7 @@ def main() -> None:
     log("配置")
 
     ix = index.build(vecs)
-    index.write(ix, vecs, OUT)
+    index.write(ix, *vecs.shape, OUT)
     log("索引")
 
     neighbors.write(vecs, OUT, log)

@@ -11,7 +11,6 @@
 使っているファイルと、加えた変更:
 
 - `data/index.bin`: 単語ベクトルを長さ 1 にそろえ、検索用に量子化した索引（IVF-PQ）
-- `data/rerank-0.bin`、`data/rerank-1.bin`: 単語ベクトルを 1 バイト（int8）に丸めたもの
 - `data/neighbors.bin`: 単語ベクトルから計算した、各語の意味の近い語
 - `data/meta.json`: 単語の一覧と、ベクトルを 2 次元に写した位置
 

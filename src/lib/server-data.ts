@@ -41,8 +41,7 @@ export function getLexicon(): Lexicon {
   if (!g.__goiLexicon) {
     const dir = path.join(process.cwd(), "data");
     const meta = JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")) as Meta;
-    const rerank = fs.readdirSync(dir).filter((f) => /^rerank-\d+\.bin$/.test(f)).sort((a, b) => parseInt(a.slice(7)) - parseInt(b.slice(7)));
-    const index = new IvfPq(path.join(dir, "index.bin"), rerank.map((f) => path.join(dir, f)));
+    const index = new IvfPq(path.join(dir, "index.bin"));
     const byText = new Map<string, number>();
     const hiddenIds = new Set<number>();
     let maxLen = 1;
