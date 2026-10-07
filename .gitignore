@@ -3,7 +3,4 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .env*
-# 元データと途中結果（取得・変換スクリプトで作り直せる）。載せない言葉の一覧だけは、暗号化した ng.enc を git に入れる
-/data-src/*
-!/data-src/ng.enc
 

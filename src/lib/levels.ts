@@ -9,7 +9,7 @@ export const EXP = 1.6;
 /** 一番深い段（約 39 万語がすべて段 0〜5 に入る） */
 export const MAX_LEVEL = 5;
 
-/** 品詞の大分類。点の色と凡例の順。scripts/build-meta.mjs の番号と合わせる */
+/** 品詞の大分類。点の色と凡例の順。pipeline/build.py の POS_CLASS の番号と合わせる */
 export const POS_NAMES = ["動詞", "形容詞", "副詞など", "名詞", "固有名詞", "その他"];
 
 /** 拡大率 z で見せる語の数 */

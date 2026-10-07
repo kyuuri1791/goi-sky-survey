@@ -8,17 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "data:all": "npm run data:convert && npm run data:surface && npm run data:layout && npm run data:index && npm run data:meta",
-    "data:convert": "node --max-old-space-size=4096 scripts/convert.mjs data-src/chive-1.3-mc90/chive-1.3-mc90.txt",
-    "data:surface": "node --max-old-space-size=4096 scripts/surface.mjs",
-    "data:layout": "node --max-old-space-size=4096 scripts/layout-all.mjs 50000",
-    "data:index": "node --max-old-space-size=3072 scripts/build-index.mjs",
-    "data:meta": "node --max-old-space-size=2048 scripts/build-meta.mjs",
-    "ng:encrypt": "node scripts/crypt.mjs encrypt",
-    "ng:decrypt": "node scripts/crypt.mjs decrypt"
+    "data:all": "docker compose -f pipeline/compose.yaml run --rm --user $(id -u):$(id -g) pipeline build",
+    "data:bench": "docker compose -f pipeline/compose.yaml run --rm --user $(id -u):$(id -g) pipeline bench",
+    "ng:edit": "docker compose -f pipeline/compose.yaml run --rm --user $(id -u):$(id -g) pipeline ngcrypt edit"
   },
   "devDependencies": {
-    "umap-js": "^1.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

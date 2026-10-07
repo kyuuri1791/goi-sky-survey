@@ -1,4 +1,4 @@
-// 意味の近い語を探す索引（IVF-PQ）。scripts/build-index.mjs で作った data/index.bin と data/rerank.bin を使う。
+// 意味の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin と data/rerank-*.bin を使う。
 //
 // IVF: 語をグループに分けておき、問い合わせに近い nprobe グループの中だけ調べる
 // PQ:  各語のベクトル（グループの中心からのずれ）を区切りごとの代表の番号（1 バイト × M）で持ち、
