@@ -39,7 +39,7 @@ def to_hira(s: str) -> str:
 
 def analyze(words: list[str]) -> tuple[dict, dict, dict]:
     """words（正規化表記）について、(表示用の書き方, 品詞, 別名 {reading, variants}) を返す"""
-    pos_of, reading_of, rank_of, variants_of = {}, {}, {}, {}
+    pos_of, reading_of, rank_of, variants_of, readings_of = {}, {}, {}, {}, {}
     kana_pos, costs = {}, {}  # かなに戻すかどうかを決める品詞と、書き方ごとの一番小さいコスト
     for file_index, c in sudachi_lines():
         surface, pos1, conj_type, conj_form, norm = c[4], c[5], c[9], c[10], c[12]
@@ -47,8 +47,11 @@ def analyze(words: list[str]) -> tuple[dict, dict, dict]:
             cost = float(c[3])
         except ValueError:
             cost = float("nan")
-        if file_index == 0 and surface != norm and has_hira(surface):
-            variants_of.setdefault(norm, {})[surface] = None
+        # 検索用の別名: small_lex.csv にある、正規化表記と違う書き方（カブトムシ → 甲虫）と、すべての読み（甲虫 → こうちゅう、かぶとむし）
+        if file_index == 0:
+            if surface != norm:
+                variants_of.setdefault(norm, {})[surface] = None
+            readings_of.setdefault(norm, {})[to_hira(c[11])] = None
         # 品詞と読みは、同じ語の見出しのうち一番よく使われるもの（正規化表記と同じ書き方で、コストが一番小さいもの）から決める。
         # 「円」は普通名詞のほかに人名・地名の見出しもあるので、適当に選ぶと固有名詞になってしまう。コストはよく使われる語ほど小さい（負もある）。
         # ちょうど 0 はコストが付いていない（core_lex.csv の全部と、small_lex.csv の記号など）ので後回しにし、small_lex.csv にある語はそちらを優先する
@@ -93,5 +96,5 @@ def analyze(words: list[str]) -> tuple[dict, dict, dict]:
     display.update(OVERRIDE)
 
     pos = {w: pos_of.get(w, "その他") for w in words}
-    alias = {w: {"reading": reading_of.get(w), "variants": list(variants_of.get(w, {}))} for w in words}
+    alias = {w: {"reading": reading_of.get(w), "variants": list(variants_of.get(w, {})), "readings": list(readings_of.get(w, {}))} for w in words}
     return display, pos, alias

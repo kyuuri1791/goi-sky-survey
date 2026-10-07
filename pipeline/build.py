@@ -9,6 +9,7 @@
   7. /out（= data/）に index.bin、rerank-*.bin、neighbors.bin、meta.json を書き出す
 
   python -m build             全部作る
+  python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/meta.json のまま）
   python -m build neighbors   近い語の表だけ作り直す（配置は変えない）
 """
 
@@ -37,11 +38,11 @@ def log(s: str) -> None:
 
 
 def aliases(words: list[str], display: list[str], alias: dict) -> dict[str, int]:
-    """検索用の別名 → 語の番号。読みを先に、ひらがなを含む別の書き方を後に入れ、同じ別名はよく使われる語（番号の小さい方）にする。
+    """検索用の別名 → 語の番号。いちばんよく使われる読み、別の書き方、ほかの読みの順に入れ、同じ別名はよく使われる語（番号の小さい方）にする。
     どれかの語の書き方そのものと同じ別名は入れない（書き方の方を優先する）"""
     exact = set(words) | set(display)
     out: dict[str, int] = {}
-    for key in ("reading", "variants"):
+    for key in ("reading", "variants", "readings"):
         for i, w in enumerate(words):
             ts = alias[w][key]
             for t in [ts] if isinstance(ts, str) else ts or []:
@@ -64,6 +65,12 @@ def main() -> None:
     surf, pos, alias = analyze(words)
     display = [surf.get(w, w) for w in words]
     log(f"書き方・品詞・別名（書き方を変える語 {sum(w in surf for w in words)}）")
+    if sys.argv[1:] == ["meta"]:
+        prev = json.loads((OUT / "meta.json").read_text())
+        if prev["word"] != words:
+            sys.exit("今の data/meta.json と語の並びが違うので、配置を使い回せません（python -m build で全部作り直してください）")
+        write_meta(words, display, pos, alias, ids, prev["x"], prev["y"])
+        return
 
     # float32 のまま丸めると JSON に 0.12345000267028809 のように書かれるので、float64 にしてから丸める
     xy = layout(vecs).astype("float64").round(5)
@@ -76,17 +83,22 @@ def main() -> None:
     neighbors.write(vecs, OUT, log)
     log("近い語")
 
+    write_meta(words, display, pos, alias, ids, xy[:, 0].tolist(), xy[:, 1].tolist())
+
+
+def write_meta(words, display, pos, alias, ids, x, y) -> None:
     meta = {
         "word": words,
         "display": display,
         "pos": [POS_CLASS.get(pos[w], 5) for w in words],
-        "x": xy[:, 0].tolist(),
-        "y": xy[:, 1].tolist(),
+        "x": x,
+        "y": y,
         "rank": [i + 1 for i in ids],
         "hidden": [0] * len(words),
         "alias": aliases(words, display, alias),
     }
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")))
+    log(f"別名 {len(meta['alias'])}")
     for f in sorted(OUT.iterdir()):
         log(f"data/{f.name} {f.stat().st_size / 1e6:.1f}MB")
 
