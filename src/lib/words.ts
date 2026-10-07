@@ -1,6 +1,6 @@
 import "server-only";
 import type { Hit } from "./ivfpq.ts";
-import { getLexicon } from "./server-data.ts";
+import { getLexicon, NEIGHBORS } from "./server-data.ts";
 
 /** ブラウザに返す語の情報 */
 export type WordInfo = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
@@ -53,7 +53,17 @@ export function combine(ids: number[]): Float32Array {
   return v;
 }
 
-/** v に意味の近い語。隠す語と exclude は除く */
+/** 語 id に意味の近い語（前もって計算した表を引くだけ）。隠す語は除く */
+export function neighborsOf(id: number): WordInfo[] {
+  const { neighborIds, neighborScores, hiddenIds } = getLexicon();
+  const out: WordInfo[] = [];
+  for (let k = id * NEIGHBORS; k < (id + 1) * NEIGHBORS; k++) {
+    if (!hiddenIds.has(neighborIds[k])) out.push(info(neighborIds[k], neighborScores[k] / 10000));
+  }
+  return out;
+}
+
+/** v に意味の近い語（索引で探す。複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
 export function nearest(v: Float32Array, k: number, exclude: number[] = []): WordInfo[] {
   const { index, hiddenIds } = getLexicon();
   const ex = new Set([...hiddenIds, ...exclude]);

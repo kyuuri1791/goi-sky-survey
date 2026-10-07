@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // 検索の索引と単語の情報は実行時に fs で読むので同梱する
   outputFileTracingIncludes: {
-    "/api/*": ["./data/index.bin", "./data/rerank-*.bin", "./data/meta.json"],
+    "/api/*": ["./data/index.bin", "./data/rerank-*.bin", "./data/meta.json", "./data/neighbors.bin"],
   },
   async headers() {
     return [

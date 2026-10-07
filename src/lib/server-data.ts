@@ -26,7 +26,13 @@ export type Lexicon = {
   hiddenIds: Set<number>;
   /** 複合語を分けるときの、一番長い語の文字数 */
   maxLen: number;
+  /** 前もって計算した近い語（語ごとに NEIGHBORS 個、近い順）と、その近さ × 10000 */
+  neighborIds: Uint32Array;
+  neighborScores: Int16Array;
 };
+
+/** neighbors.bin に入っている、語ごとの近い語の数（pipeline/neighbors.py の K） */
+export const NEIGHBORS = 8;
 
 const g = globalThis as { __goiLexicon?: Lexicon };
 
@@ -53,7 +59,12 @@ export function getLexicon(): Lexicon {
     });
     const byAlias = new Map(Object.entries(meta.alias));
     for (const t of byAlias.keys()) maxLen = Math.max(maxLen, t.length);
-    g.__goiLexicon = { meta, index, byText, byAlias, hiddenIds, maxLen: Math.min(maxLen, 20) };
+    // 近い語の表: 番号（u32）の並びのあとに近さ（i16）の並び
+    const nb = fs.readFileSync(path.join(dir, "neighbors.bin"));
+    const count = meta.word.length * NEIGHBORS;
+    const neighborIds = new Uint32Array(nb.buffer.slice(nb.byteOffset, nb.byteOffset + count * 4));
+    const neighborScores = new Int16Array(nb.buffer.slice(nb.byteOffset + count * 4, nb.byteOffset + count * 6));
+    g.__goiLexicon = { meta, index, byText, byAlias, hiddenIds, maxLen: Math.min(maxLen, 20), neighborIds, neighborScores };
   }
   return g.__goiLexicon;
 }

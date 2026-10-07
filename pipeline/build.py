@@ -5,14 +5,20 @@
   3. 表示用の書き方・品詞・検索用の別名を決める
   4. UMAP で 2 次元に並べる
   5. IVF-PQ の索引を作る
-  6. /out（= data/）に index.bin、rerank-*.bin、meta.json を書き出す
+  6. 全部の語の近い語を計算する
+  7. /out（= data/）に index.bin、rerank-*.bin、neighbors.bin、meta.json を書き出す
+
+  python -m build             全部作る
+  python -m build neighbors   近い語の表だけ作り直す（配置は変えない）
 """
 
 import json
+import sys
 import time
 from pathlib import Path
 
 import index
+import neighbors
 import ngcrypt
 import sources
 from layout import layout
@@ -50,6 +56,10 @@ def main() -> None:
     words, vecs = [all_words[i] for i in ids], all_vecs[ids]
     del all_vecs  # 表示しない語も含む元のベクトルは、ここで手放してメモリを空ける
     log(f"表示する語 {len(words)}（chiVe {len(all_words)} 語から）")
+    if sys.argv[1:] == ["neighbors"]:
+        neighbors.write(vecs, OUT, log)
+        log("近い語")
+        return
 
     surf, pos, alias = analyze(words)
     display = [surf.get(w, w) for w in words]
@@ -62,6 +72,9 @@ def main() -> None:
     ix = index.build(vecs)
     index.write(ix, vecs, OUT)
     log("索引")
+
+    neighbors.write(vecs, OUT, log)
+    log("近い語")
 
     meta = {
         "word": words,
