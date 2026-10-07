@@ -4,8 +4,8 @@ services:
   pipeline:
     build: .
     image: goi-pipeline
-    # 鍵（NG_KEY）は .env から環境変数で渡す
-    env_file: ../.env
+    # 鍵（NG_KEY）は pipeline/.env から環境変数で渡す（ルートの .env だと Next.js がビルド結果にコピーしてしまうので置かない）
+    env_file: .env
     volumes:
       - .:/app # コードと ng.enc
       - ../data:/out # 書き出し先

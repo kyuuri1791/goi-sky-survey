@@ -1,6 +1,6 @@
 """載せない言葉の一覧（ng.enc）の暗号化と復号。
 
-一覧の中身は公開しないので、git には暗号化した ng.enc だけを入れる。鍵は環境変数 NG_KEY（compose が .env から渡す）。
+一覧の中身は公開しないので、git には暗号化した ng.enc だけを入れる。鍵は環境変数 NG_KEY（compose が pipeline/.env から渡す）。
 復号した一覧はディスクに書かず、メモリ上で使う（編集するときだけ /tmp の tmpfs に置く）。
 
   python -m ngcrypt edit   ng.enc を復号してエディタで開き、保存したら暗号化し直す
@@ -24,7 +24,7 @@ MAGIC = b"NGE2"
 
 def _key(salt: bytes) -> bytes:
     if not os.environ.get("NG_KEY"):
-        sys.exit("鍵がありません。.env に NG_KEY を設定してください")
+        sys.exit("鍵がありません。pipeline/.env に NG_KEY を設定してください")
     return hashlib.scrypt(os.environ["NG_KEY"].encode(), salt=salt, n=2**15, r=8, p=1, maxmem=64 * 1024 * 1024, dklen=32)
 
 
