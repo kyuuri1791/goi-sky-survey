@@ -399,7 +399,11 @@ export default function Sky({ home }: { home: HomeView }) {
       requestAnimationFrame(loop);
       setTimeout(() => {
         flyTo(home.x, home.y, fitScale(), 3000);
-        setTimeout(() => (introDone = true), 3000);
+        setTimeout(() => {
+          introDone = true;
+          // 検索に使うデータを、サーバーに先に読み込ませておく（最初の複合語の検索だけ遅くならないように）
+          void fetch("/api/warmup");
+        }, 3000);
         // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
         if (selected?.id === d.word.id) fadeStart = performance.now();
       }, 1500);
