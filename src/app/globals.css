@@ -45,6 +45,17 @@ header {
 header h1 span {
   display: inline-block;
 }
+/* タイトルを押しても全体の表示に戻る */
+header h1 button.title {
+  all: unset;
+  cursor: pointer;
+  pointer-events: auto;
+}
+header nav {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
 button.link {
   all: unset;
   cursor: pointer;
@@ -61,7 +72,6 @@ button.link:hover {
 /* button.link の all: unset で、見出しの帯の pointer-events: none を受け継いでしまうので戻す */
 header button.link {
   pointer-events: auto;
-  margin-left: auto;
   flex-shrink: 0;
 }
 .bar {

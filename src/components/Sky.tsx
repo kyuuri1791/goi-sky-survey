@@ -28,7 +28,9 @@ export default function Sky({ home }: { home: HomeView }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
   const [about, setAbout] = useState(false);
-  const api = useRef<{ select: (w: Word, neighbors: Word[], fly: boolean) => void } | null>(null);
+  /** 最初の範囲から外れているか（「全体を表示」ボタンを出すか） */
+  const [away, setAway] = useState(false);
+  const api = useRef<{ select: (w: Word, neighbors: Word[], fly: boolean) => void; goHome: () => void } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -217,6 +219,11 @@ export default function Sky({ home }: { home: HomeView }) {
       };
     };
 
+    /** 最初の範囲（home）に戻る。選んでいる語の目印は残す */
+    const goHome = () => flyTo(home.x, home.y, fitScale(), 1200);
+    /** 冒頭の演出が終わったか。終わるまでは「全体を表示」を出さない */
+    let introDone = false;
+    let awayNow = false;
     let lastTiles = 0;
     const loop = (t: number) => {
       if (disposed) return;
@@ -224,6 +231,9 @@ export default function Sky({ home }: { home: HomeView }) {
       if (t - lastTiles > 200) {
         lastTiles = t;
         requestTiles();
+        // 拡大しているか、中心から画面の 4 分の 1 以上ずれていたら、最初の範囲から外れているとみなす
+        const isAway = introDone && (zoom() > 1.25 || Math.abs(view.x - home.x) * view.s > W / 4 || Math.abs(view.y - home.y) * view.s > H / 4);
+        if (isAway !== awayNow) setAway((awayNow = isAway));
       }
       draw(t);
       requestAnimationFrame(loop);
@@ -233,6 +243,16 @@ export default function Sky({ home }: { home: HomeView }) {
      * 語 w と近い語が画面の半分ほどに収まる拡大率。2 次元に写したときに遠くへ離れてしまった近い語
      * （ほかの近い語までの距離の中央値の 3 倍より遠いもの）は、引きすぎないよう計算から外す
      */
+    /**
+     * 語を選んだときに見せる、画面のうち隠れていない範囲（中心と幅・高さ）。
+     * スマホ（幅 640px 以下）ではパネルが下の 4 割ほどを覆うので、見出しの下からパネルの上までにする
+     */
+    const freeArea = () => {
+      if (W > 640) return { cx: W / 2, cy: H / 2, w: W, h: H };
+      const top = 80, bottom = H - 74 - H * 0.4;
+      return { cx: W / 2, cy: (top + bottom) / 2, w: W, h: bottom - top };
+    };
+
     const focusScale = (w: Word, near: Word[]) => {
       const ds = near.map((n) => Math.hypot(n.x - w.x, n.y - w.y)).sort((a, b) => a - b);
       const median = ds.length ? ds[Math.floor(ds.length / 2)] : 0;
@@ -241,7 +261,8 @@ export default function Sky({ home }: { home: HomeView }) {
         const d = Math.hypot(n.x - w.x, n.y - w.y);
         if (d <= median * 3) extent = Math.max(extent, Math.abs(n.x - w.x), Math.abs(n.y - w.y));
       }
-      const s = (Math.min(W, H) * 0.3) / Math.max(extent, 0.0005);
+      const area = freeArea();
+      const s = (Math.min(area.w, area.h) * 0.3) / Math.max(extent, 0.0005);
       return Math.min(fitScale() * 400, Math.max(fitScale() * 12, s));
     };
 
@@ -251,9 +272,19 @@ export default function Sky({ home }: { home: HomeView }) {
         selected = w;
         marks = [w, ...neighbors];
         lines = neighbors.map((n) => [w, n]);
-        if (fly) flyTo(w.x, w.y, focusScale(w, neighbors));
+        if (fly) {
+          // 語が、隠れていない範囲の真ん中に来るように視点をずらす
+          const s = focusScale(w, neighbors), area = freeArea();
+          flyTo(w.x + (W / 2 - area.cx) / s, w.y + (H / 2 - area.cy) / s, s);
+        }
       },
+      goHome,
     };
+    // Esc か Home キーでも戻る（検索欄に入力しているときは除く）
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "Escape" || e.key === "Home") && !(e.target instanceof HTMLInputElement)) goHome();
+    };
+    addEventListener("keydown", onKey);
 
     // ドラッグ・ホイール・ピンチ・タップ
     const pointers = new Map<number, [number, number]>();
@@ -340,6 +371,7 @@ export default function Sky({ home }: { home: HomeView }) {
       requestAnimationFrame(loop);
       setTimeout(() => {
         flyTo(home.x, home.y, fitScale(), 3000);
+        setTimeout(() => (introDone = true), 3000);
         // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
         if (selected?.id === d.word.id) fadeStart = performance.now();
       }, 1500);
@@ -348,6 +380,7 @@ export default function Sky({ home }: { home: HomeView }) {
     return () => {
       disposed = true;
       removeEventListener("resize", resize);
+      removeEventListener("keydown", onKey);
     };
   }, [home]);
 
@@ -376,12 +409,21 @@ export default function Sky({ home }: { home: HomeView }) {
       <canvas ref={canvasRef} className="sky" />
       <header>
         <h1>
-          <span>日本語語彙スカイサーベイ</span>
-          <span>（β版）</span>
+          <button className="title" title="全体を表示" onClick={() => api.current?.goHome()}>
+            <span>日本語語彙スカイサーベイ</span>
+            <span>（β版）</span>
+          </button>
         </h1>
-        <button className="link" onClick={() => setAbout(true)}>
-          このデータについて
-        </button>
+        <nav>
+          {away && (
+            <button className="link" onClick={() => api.current?.goHome()}>
+              全体を表示
+            </button>
+          )}
+          <button className="link" onClick={() => setAbout(true)}>
+            このデータについて
+          </button>
+        </nav>
       </header>
       {panel && (
         <div className="panel">
