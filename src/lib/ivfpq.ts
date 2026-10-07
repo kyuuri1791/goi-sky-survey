@@ -19,6 +19,19 @@ const MAGIC = 0x31515649;
 
 export type Hit = { id: number; score: number };
 
+/** ファイルを最後まで読み流す。1 MB の入れ物を使い回すので、ファイルが大きくてもメモリは増えない */
+async function warmUp(paths: string[]) {
+  const buf = Buffer.alloc(1 << 20);
+  for (const p of paths) {
+    const fh = await fs.promises.open(p);
+    try {
+      while ((await fh.read(buf, 0, buf.length, null)).bytesRead > 0);
+    } finally {
+      await fh.close();
+    }
+  }
+}
+
 export class IvfPq {
   readonly n: number;
   readonly dim: number;
@@ -57,6 +70,9 @@ export class IvfPq {
     this.row = Buffer.alloc(4 + this.dim);
     this.rerankFds = rerankPaths.map((p) => fs.openSync(p, "r"));
     this.perFile = fs.statSync(rerankPaths[0]).size / this.row.length;
+    // デプロイ先ではファイルの各部分を初めて読むときに遅く、拾い読みする検索が最初だけ 1 秒以上かかる。
+    // 起動したら裏で一度最後まで読み流しておく（読んだ中身は捨てるので、メモリはほとんど増えない）
+    warmUp(rerankPaths).catch(() => {}); // 失敗しても検索はできる（最初だけ遅いまま）ので無視する
   }
 
   /** 語 id の並べ直し用の行（倍率と丸めたベクトル）を this.row に読む */
