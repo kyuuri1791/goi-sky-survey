@@ -139,9 +139,9 @@ header button.link {
   padding: 2px 0;
 }
 .panel button:hover {
-  color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
 }
-.panel button span {
+.panel button .score {
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
@@ -162,8 +162,9 @@ header button.link {
   color: var(--fg);
   font-weight: 600;
 }
-.legend b {
+.chip {
   display: inline-block;
+  vertical-align: 1px;
   width: 8px;
   height: 8px;
   border-radius: 50%;

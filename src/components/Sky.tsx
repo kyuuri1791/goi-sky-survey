@@ -10,15 +10,17 @@ type Word = { id: number; text: string; x: number; y: number; rank: number; pos:
 /** パネルに出す語と近い語。composite は、語彙にない複合語を分けた語 */
 type Panel = { word: Word; neighbors: Word[]; composite?: Word[] } | null;
 
-// 点の色: 品詞（POS_NAMES の順）
+// 点の色: 品詞（POS_NAMES の順）。色覚の違いがあっても見分けやすい Okabe-Ito の配色を、暗い背景向けに明るくしたもの。
+// いちばん多い名詞は白っぽくして全体を星空らしく保ち、その他（記号・接尾辞など）は灰色で目立たせない
 const COLORS = [
-  [150, 175, 255],
-  [215, 225, 255],
-  [255, 248, 225],
-  [255, 236, 190],
-  [255, 200, 140],
-  [255, 150, 120],
+  [100, 185, 240], // 動詞: 空色
+  [80, 210, 170], // 形容詞: 青緑
+  [225, 145, 205], // 副詞など: 赤紫
+  [235, 230, 215], // 名詞: 白
+  [245, 170, 60], // 固有名詞: 橙
+  [150, 150, 165], // その他: 灰
 ];
+const posColor = (pos: number) => `rgb(${COLORS[pos] ?? COLORS[5]})`;
 
 export default function Sky() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -110,7 +112,7 @@ export default function Sky() {
       ctx.setLineDash([3, 5]);
       for (const [a, b] of lines) {
         const [ax, ay] = toScreen(a.x, a.y), [bx, by] = toScreen(b.x, b.y);
-        ctx.strokeStyle = "rgba(255,210,122,0.7)";
+        ctx.strokeStyle = "rgba(200,210,235,0.45)";
         ctx.beginPath();
         ctx.moveTo(ax, ay);
         ctx.lineTo(bx, by);
@@ -155,7 +157,7 @@ export default function Sky() {
             taken.add(key);
             const size = Math.max(10, 14 - mag * 1.2);
             ctx.font = `500 ${size}px 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
-            ctx.fillStyle = `rgba(215,224,245,${Math.min(1, a + 0.15) * fade})`;
+            ctx.fillStyle = `rgba(${cr},${cg},${cb},${Math.min(1, a + 0.15) * fade})`;
             ctx.fillText(text, sx + r + 4, sy);
             hitLabels.push({ x: sx + r + 4, y: sy - size * 0.7, w: ctx.measureText(text).width, h: size * 1.4, id });
           }
@@ -183,14 +185,15 @@ export default function Sky() {
         hitLabels.push({ ...spot, id: m.id });
         ctx.fillStyle = "rgba(3,5,11,0.65)";
         ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
-        ctx.fillStyle = selected && m.id === selected.id ? "#fff3cf" : "#ffd27a";
+        // 名前は、点と同じ品詞の色にする（凡例・パネルとそろえる）
+        ctx.fillStyle = posColor(m.pos);
         ctx.textBaseline = "top";
         ctx.fillText(m.text, spot.x, spot.y + 1);
         ctx.textBaseline = "middle";
       }
       if (selected) {
         const [sx, sy] = toScreen(selected.x, selected.y);
-        ctx.strokeStyle = "#ffd27a";
+        ctx.strokeStyle = posColor(selected.pos);
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(sx, sy, 10, 0, Math.PI * 2);
@@ -386,18 +389,24 @@ export default function Sky() {
       {panel && (
         <div className="panel">
           {panel.composite && <div className="kind">{panel.composite.map((w) => w.text).join(" ＋ ")} に近い語</div>}
-          <h2>{panel.word.text}</h2>
+          <h2 style={{ color: posColor(panel.word.pos) }}>{panel.word.text}</h2>
           <dl>
             <dt>頻度順位</dt>
             <dd>#{panel.word.rank.toLocaleString()}</dd>
             <dt>品詞</dt>
-            <dd>{posName(panel.word.pos)}</dd>
+            <dd>
+              <b className="chip" style={{ background: posColor(panel.word.pos) }} />
+              {posName(panel.word.pos)}
+            </dd>
           </dl>
           <h3>意味の近い語</h3>
           {panel.neighbors.map((w) => (
             <button key={w.id} onClick={() => pick(w)}>
-              {w.text}
-              <span>{w.score?.toFixed(2)}</span>
+              <span>
+                <b className="chip" style={{ background: posColor(w.pos) }} />
+                {w.text}
+              </span>
+              <span className="score">{w.score?.toFixed(2)}</span>
             </button>
           ))}
         </div>
@@ -409,7 +418,7 @@ export default function Sky() {
         <br />
         {POS_NAMES.map((p, i) => (
           <span key={p}>
-            <b style={{ background: `rgb(${COLORS[i]})` }} />
+            <b className="chip" style={{ background: posColor(i) }} />
             {p}
             <br />
           </span>
