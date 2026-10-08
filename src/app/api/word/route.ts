@@ -1,9 +1,11 @@
 import type { NextRequest } from "next/server";
+import { loadAll } from "@/lib/server-data.ts";
 import { combine, info, nearest, neighborsOf, resolve } from "@/lib/words.ts";
 
 // 語を探す: /api/word?w=猫
 // 語彙にない複合語は語彙にある語に分けて意味を合わせ、その近くの語を返す（composite に分けた語）
 export async function GET(request: NextRequest) {
+  loadAll();
   const w = (request.nextUrl.searchParams.get("w") ?? "").slice(0, 40);
   const ids = resolve(w);
   if (!ids) return Response.json({ error: `「${w}」は見つかりませんでした` }, { status: 404 });

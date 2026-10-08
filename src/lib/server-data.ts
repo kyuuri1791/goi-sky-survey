@@ -24,11 +24,7 @@ const DIR = path.join(process.cwd(), "data");
 const g = globalThis as { __goi?: Map<string, unknown> };
 const cache = (g.__goi ??= new Map());
 
-/**
- * 最初に呼ばれたときに make で作り、以後は使い回す。
- * データは要る分だけ読む（デプロイ先ではしばらく使わないとサーバーが止まり、次の最初の要求で全部読み直すので、
- * タイルだけの要求なら単語の情報だけ、というように、起動直後にかかる時間を短くする）
- */
+/** 最初に呼ばれたときに make で作り、以後は使い回す */
 function once<T>(key: string, make: () => T): () => T {
   return () => {
     if (!cache.has(key)) cache.set(key, make());
@@ -66,3 +62,15 @@ export const getNeighbors = once("neighbors", () => {
 
 /** 意味の近い語を探す索引（複合語の検索だけで使う） */
 export const getIndex = once("index", () => new IvfPq(path.join(DIR, "index.bin")));
+
+/**
+ * データを全部読み込む（2 回目からは何もしない）。どの API でも最初に呼ぶ。
+ * デプロイ先は、要求が重なるとサーバーを何台も立ち上げて振り分ける。ページを開いたときのタイルの要求で立ち上がったサーバーが
+ * 索引を読んでいないと、そこに当たった最初の検索だけ索引の読み込み（本番で約 1 秒）を待つことになるので、どのサーバーも最初に全部読んでおく
+ */
+export function loadAll() {
+  getHiddenIds();
+  getByText();
+  getNeighbors();
+  getIndex();
+}
