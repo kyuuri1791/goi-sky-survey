@@ -24,6 +24,12 @@ const DIR = path.join(process.cwd(), "data");
 const g = globalThis as { __goi?: Map<string, unknown> };
 const cache = (g.__goi ??= new Map());
 
+/**
+ * API の応答に付けるキャッシュの指定。答えは誰が見ても同じなので、CDN に覚えさせてサーバーまで届く要求を減らす（CPU の使用量を抑える）。
+ * ブラウザには残さない（max-age=0）。デプロイすると CDN のキャッシュは消えるので、データを作り直しても古い答えは残らない
+ */
+export const CDN_CACHE = { "Cache-Control": "public, max-age=0, s-maxage=31536000" };
+
 /** 最初に呼ばれたときに make で作り、以後は使い回す */
 function once<T>(key: string, make: () => T): () => T {
   return () => {

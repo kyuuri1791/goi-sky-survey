@@ -392,7 +392,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         setPanel(null);
         return;
       }
-      fetch(`/api/neighbors?id=${best}`)
+      fetch(`/api/neighbors/${best}`)
         .then((r) => r.json())
         .then((d) => {
           if (d.error) return;
@@ -429,14 +429,14 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
 
   const search = async (text: string) => {
     setMsg("");
-    const d = await fetch(`/api/word?w=${encodeURIComponent(text)}`).then((r) => r.json());
+    const d = await fetch(`/api/word/${encodeURIComponent(text)}`).then((r) => r.json());
     if (d.error) return setMsg(d.error);
     api.current?.select(d.word, d.neighbors, true);
     setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite });
   };
 
   const pick = (w: Word) => {
-    fetch(`/api/neighbors?id=${w.id}`)
+    fetch(`/api/neighbors/${w.id}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) return;
