@@ -28,6 +28,7 @@ type TilePoint = [number, number, number, number, string];
 /** home: 最初に見せる範囲、intro: 最初に見せる語と近い語、baseTile: 全体の星（段 0 のタイル）。どれもページに入れて渡す */
 export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: { word: Word; neighbors: Word[] }; baseTile: TilePoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
   const [about, setAbout] = useState(false);
@@ -431,6 +432,8 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     setMsg("");
     const d = await fetch(`/api/word/${encodeURIComponent(text)}`).then((r) => r.json());
     if (d.error) return setMsg(d.error);
+    // 見つかったら入力欄から抜ける（Esc で全体に戻れるように。スマホではキーボードも閉じる）。見つからなければ打ち直せるよう残す
+    inputRef.current?.blur();
     api.current?.select(d.word, d.neighbors, true);
     setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite });
   };
@@ -510,6 +513,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       {msg && <div className="msg">{msg}</div>}
       <div className="bar">
         <input
+          ref={inputRef}
           placeholder="語で検索（例: 深夜ラジオ）"
           autoComplete="off"
           onKeyDown={(e) => {
