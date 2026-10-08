@@ -23,7 +23,10 @@ const COLORS = [
 const posColor = (pos: number) => `rgb(${COLORS[pos] ?? COLORS[5]})`;
 
 /** home: 最初に見せる範囲（よく使われる語が集まっている所） */
-export default function Sky({ home, intro }: { home: HomeView; intro: { word: Word; neighbors: Word[] } }) {
+type TilePoint = [number, number, number, number, string];
+
+/** home: 最初に見せる範囲、intro: 最初に見せる語と近い語、baseTile: 全体の星（段 0 のタイル）。どれもページに入れて渡す */
+export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: { word: Word; neighbors: Word[] }; baseTile: TilePoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
@@ -50,13 +53,25 @@ export default function Sky({ home, intro }: { home: HomeView; intro: { word: Wo
     // 読み込んだ点（よく使われる順＝id の小さい順に並べておく）
     const pts: { x: number; y: number; id: number; pos: number; text: string }[] = [];
     const loaded = new Set<string>();
-    const loadTile = async (key: string) => {
-      if (loaded.has(key)) return;
-      loaded.add(key);
-      const list: [number, number, number, number, string][] = await fetch(`/api/tiles/${key}`).then((r) => r.json());
+    const addPoints = (list: TilePoint[]) => {
       for (const [x, y, id, pos, text] of list) pts.push({ x, y, id, pos, text });
       pts.sort((a, b) => a.id - b.id);
     };
+    const loadTile = async (key: string) => {
+      if (loaded.has(key)) return;
+      loaded.add(key);
+      try {
+        const r = await fetch(`/api/tiles/${key}`);
+        if (!r.ok) throw new Error(String(r.status));
+        addPoints(await r.json());
+      } catch {
+        // 読めなかったら（サーバーが起きる途中のエラーなど）、次に見えたときに読み直す
+        loaded.delete(key);
+      }
+    };
+    // 全体の星はページに入っているので、読み込まずに使う
+    addPoints(baseTile);
+    loaded.add("0/0/0");
 
     // 拡大率 1 = 最初に見せる範囲（home）が画面に収まる大きさ。縦横それぞれ合わせて、小さい方にする
     const fitScale = () => Math.min((W * 0.46) / home.rx, (H * 0.46) / home.ry);
@@ -393,7 +408,6 @@ export default function Sky({ home, intro }: { home: HomeView; intro: { word: Wo
 
     // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
     // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
-    void loadTile("0/0/0");
     view.x = intro.word.x;
     view.y = intro.word.y;
     view.s = fitScale() * 40;
@@ -404,7 +418,7 @@ export default function Sky({ home, intro }: { home: HomeView; intro: { word: Wo
       setTimeout(() => {
         introDone = true;
         // 検索に使うデータを、サーバーに先に読み込ませておく（最初の複合語の検索だけ遅くならないように）
-        void fetch("/api/warmup");
+        fetch("/api/warmup").catch(() => {});
       }, 3000);
       // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
       if (selected?.id === intro.word.id) fadeStart = performance.now();
@@ -415,7 +429,7 @@ export default function Sky({ home, intro }: { home: HomeView; intro: { word: Wo
       removeEventListener("resize", resize);
       removeEventListener("keydown", onKey);
     };
-  }, [home, intro]);
+  }, [home, intro, baseTile]);
 
   const search = async (text: string) => {
     setMsg("");
