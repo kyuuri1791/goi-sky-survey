@@ -23,7 +23,7 @@ const COLORS = [
 const posColor = (pos: number) => `rgb(${COLORS[pos] ?? COLORS[5]})`;
 
 /** home: 最初に見せる範囲（よく使われる語が集まっている所） */
-export default function Sky({ home }: { home: HomeView }) {
+export default function Sky({ home, intro }: { home: HomeView; intro: { word: Word; neighbors: Word[] } }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [msg, setMsg] = useState("");
@@ -392,34 +392,30 @@ export default function Sky({ home }: { home: HomeView }) {
     };
 
     // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
-    (async () => {
-      // 全体のよく使われる語が入ったタイルは、「猫」の答えを待たずに読み始めておく
-      void loadTile("0/0/0");
-      const d = await fetch("/api/word?w=猫").then((r) => r.json());
-      if (disposed) return;
-      view.x = d.word.x;
-      view.y = d.word.y;
-      view.s = fitScale() * 40;
-      api.current?.select(d.word, d.neighbors, false);
-      requestAnimationFrame(loop);
+    // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
+    void loadTile("0/0/0");
+    view.x = intro.word.x;
+    view.y = intro.word.y;
+    view.s = fitScale() * 40;
+    api.current?.select(intro.word, intro.neighbors, false);
+    requestAnimationFrame(loop);
+    setTimeout(() => {
+      flyTo(home.x, home.y, fitScale(), 3000);
       setTimeout(() => {
-        flyTo(home.x, home.y, fitScale(), 3000);
-        setTimeout(() => {
-          introDone = true;
-          // 検索に使うデータを、サーバーに先に読み込ませておく（最初の複合語の検索だけ遅くならないように）
-          void fetch("/api/warmup");
-        }, 3000);
-        // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
-        if (selected?.id === d.word.id) fadeStart = performance.now();
-      }, 1500);
-    })();
+        introDone = true;
+        // 検索に使うデータを、サーバーに先に読み込ませておく（最初の複合語の検索だけ遅くならないように）
+        void fetch("/api/warmup");
+      }, 3000);
+      // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
+      if (selected?.id === intro.word.id) fadeStart = performance.now();
+    }, 1500);
 
     return () => {
       disposed = true;
       removeEventListener("resize", resize);
       removeEventListener("keydown", onKey);
     };
-  }, [home]);
+  }, [home, intro]);
 
   const search = async (text: string) => {
     setMsg("");
