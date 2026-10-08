@@ -419,7 +419,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       setTimeout(() => (introDone = true), 3000);
       // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
       if (selected?.id === intro.word.id) fadeStart = performance.now();
-    }, 1500);
+    }, 900);
 
     return () => {
       disposed = true;
