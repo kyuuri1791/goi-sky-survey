@@ -4,6 +4,7 @@
 // 点はタイル（/api/tiles）で見えている範囲のぶんだけ読み、よく使われる語ほど明るく、引いて見ているときから出す。
 // 検索と近い語はサーバーの API に聞く。
 import { useEffect, useRef, useState } from "react";
+import { CURATED_WORDS } from "@/lib/curated.ts";
 import { MAX_LEVEL, POS_NAMES, tileIndex, visibleCount as countAt, type HomeView } from "@/lib/levels.ts";
 
 type Word = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
@@ -467,6 +468,12 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       });
   };
 
+  /** 一覧（src/lib/curated.ts）からランダムに選んだ面白い語へ飛ぶ。今見ている語は選ばない */
+  const surprise = () => {
+    const pool = CURATED_WORDS.filter((w) => w !== panel?.query);
+    void search(pool[Math.floor(Math.random() * pool.length)]);
+  };
+
   // 選んでいる語を URL に入れておく（/?w=語）。そのままアドレスを送れば、相手も同じ語から見られる
   useEffect(() => {
     const url = new URL(location.href);
@@ -570,6 +577,10 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
             if (text) void search(text);
           }}
         />
+        <button className="link" onClick={surprise}>
+          面白い語<span className="wide">から始める</span>
+          <span className="narrow">へ</span>
+        </button>
       </div>
       {about && (
         <div className="about" onClick={(e) => e.target === e.currentTarget && setAbout(false)}>

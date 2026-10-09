@@ -79,9 +79,14 @@ header button.link {
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
-  width: min(320px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
 }
 .bar input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   box-sizing: border-box;
   padding: 11px 16px;
@@ -227,7 +232,17 @@ header button.link {
   font-size: 11px;
   color: var(--muted);
 }
+/* 狭い画面では「面白い語へ」と短くして、検索欄の例が切れないようにする */
+.bar .narrow {
+  display: none;
+}
 @media (max-width: 640px) {
+  .bar .wide {
+    display: none;
+  }
+  .bar .narrow {
+    display: inline;
+  }
   header h1 {
     font-size: 15px;
     letter-spacing: 0.06em;
@@ -265,4 +280,12 @@ header button.link {
 }
 .panel .head button.link:hover {
   color: var(--fg);
+}
+/* 検索欄の横の「面白い語から始める」: 検索欄と同じ高さにそろえる */
+.bar button.link {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
 }
