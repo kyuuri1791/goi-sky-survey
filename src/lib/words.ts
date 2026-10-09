@@ -55,7 +55,7 @@ export function combine(ids: number[]): Float32Array {
   return v;
 }
 
-/** 語 id に意味の近い語（前もって計算した表を引くだけ）。隠す語は除く */
+/** 語 id に使われ方の近い語（前もって計算した表を引くだけ）。隠す語は除く */
 export function neighborsOf(id: number): WordInfo[] {
   const { ids, scores } = getNeighbors();
   const hiddenIds = getHiddenIds();
@@ -66,7 +66,7 @@ export function neighborsOf(id: number): WordInfo[] {
   return out;
 }
 
-/** v に意味の近い語（索引で探す。複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
+/** v に使われ方の近い語（索引で探す。複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
 export function nearest(v: Float32Array, k: number, exclude: number[] = []): WordInfo[] {
   const ex = new Set([...getHiddenIds(), ...exclude]);
   return getIndex().search(v, k, ex).map((h: Hit) => info(h.id, h.score));

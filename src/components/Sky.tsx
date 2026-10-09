@@ -1,14 +1,14 @@
 "use client";
 
-// 単語を意味の近さで並べた平面を、暗い背景に光る点として描く。
+// 単語を使われ方の近さで並べた平面を、暗い背景に光る点として描く。
 // 点はタイル（/api/tiles）で見えている範囲のぶんだけ読み、よく使われる語ほど明るく、引いて見ているときから出す。
 // 検索と近い語はサーバーの API に聞く。
 import { useEffect, useRef, useState } from "react";
 import { MAX_LEVEL, POS_NAMES, tileIndex, visibleCount as countAt, type HomeView } from "@/lib/levels.ts";
 
 type Word = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
-/** パネルに出す語と近い語。composite は、語彙にない複合語を分けた語 */
-type Panel = { word: Word; neighbors: Word[]; composite?: Word[] } | null;
+/** パネルに出す語と近い語。composite は、語彙にない複合語を分けた語。query は共有する URL に入れる文字（検索した文字か、語そのもの） */
+type Panel = { word: Word; neighbors: Word[]; composite?: Word[]; query: string } | null;
 
 // 点の色: 品詞（POS_NAMES の順）。色覚の違いがあっても見分けやすい Okabe-Ito の配色を、暗い背景向けに明るくしたもの。
 // いちばん多い名詞は白っぽくして全体を星空らしく保ち、その他（記号・接尾辞など）は灰色で目立たせない
@@ -398,7 +398,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         .then((d) => {
           if (d.error) return;
           api.current?.select(d.word, d.neighbors, false);
-          setPanel({ word: d.word, neighbors: d.neighbors });
+          setPanel({ word: d.word, neighbors: d.neighbors, query: d.word.text });
         });
     };
     canvas.onwheel = (e) => {
@@ -407,19 +407,38 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
     };
 
-    // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
-    // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
-    view.x = intro.word.x;
-    view.y = intro.word.y;
-    view.s = fitScale() * 40;
-    api.current?.select(intro.word, intro.neighbors, false);
-    requestAnimationFrame(loop);
-    setTimeout(() => {
-      flyTo(home.x, home.y, fitScale(), 3000);
-      setTimeout(() => (introDone = true), 3000);
-      // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
-      if (selected?.id === intro.word.id) fadeStart = performance.now();
-    }, 900);
+    // 共有された URL（/?w=語）から開いたときは、冒頭の演出をせず、全体からその語へ飛ぶ
+    const shared = new URLSearchParams(location.search).get("w");
+    if (shared) {
+      view.x = home.x;
+      view.y = home.y;
+      view.s = fitScale();
+      introDone = true;
+      requestAnimationFrame(loop);
+      fetch(`/api/word/${encodeURIComponent(shared)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (disposed) return;
+          if (d.error) return setMsg(d.error);
+          api.current?.select(d.word, d.neighbors, true);
+          setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite, query: shared });
+        })
+        .catch(() => {});
+    } else {
+      // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
+      // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
+      view.x = intro.word.x;
+      view.y = intro.word.y;
+      view.s = fitScale() * 40;
+      api.current?.select(intro.word, intro.neighbors, false);
+      requestAnimationFrame(loop);
+      setTimeout(() => {
+        flyTo(home.x, home.y, fitScale(), 3000);
+        setTimeout(() => (introDone = true), 3000);
+        // 引き始めたら「猫」の目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
+        if (selected?.id === intro.word.id) fadeStart = performance.now();
+      }, 900);
+    }
 
     return () => {
       disposed = true;
@@ -435,7 +454,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     // 見つかったら入力欄から抜ける（Esc で全体に戻れるように。スマホではキーボードも閉じる）。見つからなければ打ち直せるよう残す
     inputRef.current?.blur();
     api.current?.select(d.word, d.neighbors, true);
-    setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite });
+    setPanel({ word: d.word, neighbors: d.neighbors, composite: d.composite, query: text });
   };
 
   const pick = (w: Word) => {
@@ -444,8 +463,32 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       .then((d) => {
         if (d.error) return;
         api.current?.select(d.word, d.neighbors, true);
-        setPanel({ word: d.word, neighbors: d.neighbors });
+        setPanel({ word: d.word, neighbors: d.neighbors, query: d.word.text });
       });
+  };
+
+  // 選んでいる語を URL に入れておく（/?w=語）。そのままアドレスを送れば、相手も同じ語から見られる
+  useEffect(() => {
+    const url = new URL(location.href);
+    if (panel) url.searchParams.set("w", panel.query);
+    else url.searchParams.delete("w");
+    history.replaceState(null, "", url);
+  }, [panel]);
+
+  /** 今の語の URL を共有する。スマホなどでは端末の共有メニューを開き、できなければ URL をコピーする */
+  const share = async () => {
+    if (!panel) return;
+    const url = location.href;
+    if (navigator.share) {
+      await navigator.share({ title: `${panel.word.text}｜日本語語彙スカイサーベイ`, url }).catch(() => {});
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setMsg("リンクをコピーしました");
+    } catch {
+      setMsg(url);
+    }
   };
 
   const posName = (p: number) => POS_NAMES[p] ?? "";
@@ -474,7 +517,12 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       {panel && (
         <div className="panel">
           {panel.composite && <div className="kind">{panel.composite.map((w) => w.text).join(" ＋ ")} に近い語</div>}
-          <h2 style={{ color: posColor(panel.word.pos) }}>{panel.word.text}</h2>
+          <div className="head">
+            <h2 style={{ color: posColor(panel.word.pos) }}>{panel.word.text}</h2>
+            <button className="link" onClick={share}>
+              共有
+            </button>
+          </div>
           <dl>
             <dt>頻度順位</dt>
             <dd>#{panel.word.rank.toLocaleString()}</dd>
@@ -484,7 +532,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
               {posName(panel.word.pos)}
             </dd>
           </dl>
-          <h3>意味の近い語</h3>
+          <h3>使われ方の近い語</h3>
           {panel.neighbors.map((w) => (
             <button key={w.id} onClick={() => pick(w)}>
               <span>

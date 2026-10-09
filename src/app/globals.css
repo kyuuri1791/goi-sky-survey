@@ -244,3 +244,25 @@ header button.link {
     max-height: 40dvh;
   }
 }
+/* パネルの見出し: 語と「共有」ボタンを横に並べる */
+.panel .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+/* 近い語の一覧のボタン（.panel button）の見た目を受け継がないよう、button.link の見た目に戻す */
+.panel .head button.link {
+  flex-shrink: 0;
+  display: inline-block;
+  width: auto;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: var(--panel);
+}
+.panel .head button.link:hover {
+  color: var(--fg);
+}

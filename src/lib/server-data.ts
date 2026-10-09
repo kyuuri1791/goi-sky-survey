@@ -66,7 +66,7 @@ export const getNeighbors = once("neighbors", () => {
   };
 });
 
-/** 意味の近い語を探す索引（複合語の検索だけで使う） */
+/** 使われ方の近い語を探す索引（複合語の検索だけで使う） */
 export const getIndex = once("index", () => new IvfPq(path.join(DIR, "index.bin")));
 
 /**

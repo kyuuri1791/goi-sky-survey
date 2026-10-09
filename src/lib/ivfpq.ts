@@ -1,4 +1,4 @@
-// 意味の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin を使う。複合語の検索に使う。
+// 使われ方の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin を使う。複合語の検索に使う。
 //
 // IVF: 語をグループに分けておき、問い合わせに近い nprobe グループの中だけ調べる
 // PQ:  各語のベクトル（グループの中心からのずれ）を区切りごとの代表の番号（1 バイト × M）で持ち、
@@ -75,7 +75,7 @@ export class IvfPq {
   }
 
   /**
-   * q に意味の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。
+   * q に使われ方の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。
    * score は q との cos 類似度の見積もり
    */
   search(q: Float32Array, k: number, exclude: Set<number> = new Set(), nprobe = 64): Hit[] {
