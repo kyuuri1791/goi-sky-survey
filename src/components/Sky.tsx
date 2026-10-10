@@ -121,6 +121,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       cands: { id: number; text: string; x: number; y: number; size: number; color: [number, number, number]; a: number }[],
       labelMax: number,
       t: number,
+      reserved: { x: number; y: number; w: number; h: number }[] = [],
     ) => {
       const step = Math.min(1, (t - lastFrame) / 250);
       lastFrame = t;
@@ -141,6 +142,10 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
             return b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h;
           }),
         );
+      for (const box of reserved) {
+        const k = placed.push(box) - 1;
+        for (const key of cellsOf(box)) grid.set(key, [...(grid.get(key) ?? []), k]);
+      }
       const seen = new Set<number>();
       const order = [...cands.filter((c) => labelAlpha.has(c.id)), ...cands.filter((c) => !labelAlpha.has(c.id))];
       for (const c of order) {
@@ -188,21 +193,6 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         lines = [];
         fadeStart = null;
       }
-      // 線
-      ctx.globalAlpha = fade;
-      ctx.lineWidth = 1.1;
-      ctx.setLineDash([3, 5]);
-      for (const [a, b] of lines) {
-        const [ax, ay] = toScreen(a.x, a.y), [bx, by] = toScreen(b.x, b.y);
-        ctx.strokeStyle = "rgba(200,210,235,0.45)";
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
-
       hitDots = [];
       hitLabels = [];
       const vis = visibleCount();
@@ -246,23 +236,63 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         if (p.id > vis * 1.2) break;
         if (!markIds.has(p.id)) drawStar(p.x, p.y, p.id, p.pos, p.text, false);
       }
-      drawLabels(labelCands, labelMax, t);
-      // 選んだ語の周り: 必ず描き、名前は重ならない所へ
+      // 選んだ語と近い語の点と名前の周りには、ほかの語の名前を置かない
+      ctx.font = "700 14px 'Hiragino Sans', 'Noto Sans JP', sans-serif";
+      const reserved = marks.map((m) => {
+        const [sx, sy] = toScreen(m.x, m.y);
+        return { x: sx - 12, y: sy - 14, w: ctx.measureText(m.text).width + 30, h: 28 };
+      });
+      drawLabels(labelCands, labelMax, t, reserved);
+      // 線（星と名前のあとに描いて、埋もれないようにする）
       ctx.globalAlpha = fade;
+      ctx.lineWidth = 1.3;
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = "rgba(220,228,245,0.7)";
+      for (const [a, b] of lines) {
+        const [ax, ay] = toScreen(a.x, a.y), [bx, by] = toScreen(b.x, b.y);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      // 選んだ語の周り: 必ず描き、名前は重ならない所へ
       const boxes: { x: number; y: number; w: number; h: number }[] = [];
+      // 選んだ語と近い語の点を描いてから、名前を描く（名前が点に隠れないように）
       for (const m of marks) {
-        const s = drawStar(m.x, m.y, m.id, m.pos, m.text, true);
-        if (!s) continue;
-        const [sx, sy, r] = s;
+        drawStar(m.x, m.y, m.id, m.pos, m.text, true);
+      }
+      for (const m of marks) {
+        const [sx, sy] = toScreen(m.x, m.y);
+        if (sx < -20 || sy < -20 || sx > W + 20 || sy > H + 20) continue;
+        const r = selected?.id === m.id ? 3.5 : 2.8;
         ctx.font = "700 14px 'Hiragino Sans', 'Noto Sans JP', sans-serif";
         const w = ctx.measureText(m.text).width;
-        const cands = [[sx + r + 5, sy - 9], [sx - r - 5 - w, sy - 9], [sx - w / 2, sy - r - 22], [sx - w / 2, sy + r + 4], [sx + r + 5, sy + 8], [sx + r + 5, sy - 26]];
-        const spot =
-          cands.map(([x, y]) => ({ x, y, w, h: 18 })).find((b) => !boxes.some((o) => b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h)) ??
-          { x: cands[0][0], y: cands[0][1], w, h: 18 };
+        // 名前を置く場所: まず点のすぐ隣（右・左・上・下）を試し、空いていなければ点から少しずつ離して探す
+        const near = [[sx + r + 5, sy - 9], [sx - r - 5 - w, sy - 9], [sx - w / 2, sy - r - 22], [sx - w / 2, sy + r + 4]];
+        const far: number[][] = [];
+        for (let d = 26; d <= 110; d += 21) {
+          for (let k = 0; k < 12; k++) {
+            const th = (k / 12) * Math.PI * 2;
+            far.push([sx + Math.cos(th) * d - (Math.cos(th) < -0.2 ? w : Math.cos(th) > 0.2 ? 0 : w / 2), sy + Math.sin(th) * d - 9]);
+          }
+        }
+        const free = (b: { x: number; y: number; w: number; h: number }) =>
+          b.x > 0 && b.x + b.w < W && b.y > 0 && b.y + b.h < H && !boxes.some((o) => b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h);
+        const spot = [...near, ...far].map(([x, y]) => ({ x, y, w, h: 18 })).find(free) ?? { x: near[0][0], y: near[0][1], w, h: 18 };
         boxes.push(spot);
         hitLabels.push({ ...spot, id: m.id });
-        ctx.fillStyle = "rgba(3,5,11,0.65)";
+        // 点から離して置いたときは、点と名前を細い線でつなぐ
+        const cx = Math.max(spot.x, Math.min(spot.x + spot.w, sx)), cy = Math.max(spot.y, Math.min(spot.y + spot.h, sy));
+        if (Math.hypot(cx - sx, cy - sy) > r + 10) {
+          ctx.strokeStyle = "rgba(220,228,245,0.5)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(cx, cy);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(3,5,11,0.82)";
         ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
         // 名前は、点と同じ品詞の色にする（凡例・パネルとそろえる）
         ctx.fillStyle = posColor(m.pos);
