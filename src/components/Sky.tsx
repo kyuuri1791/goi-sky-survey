@@ -292,7 +292,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
           ctx.lineTo(cx, cy);
           ctx.stroke();
         }
-        ctx.fillStyle = "rgba(3,5,11,0.82)";
+        ctx.fillStyle = "rgba(3,5,11,0.65)";
         ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
         // 名前は、点と同じ品詞の色にする（凡例・パネルとそろえる）
         ctx.fillStyle = posColor(m.pos);
