@@ -265,14 +265,14 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     /**
      * 語を選んだときに見せる、画面のうち隠れていない範囲（中心と幅・高さ）。
      * PC では右のパネル（300px ほど）、左下の凡例の列（220px ほど）、下の検索欄（80px ほど）を、
-     * スマホ（幅 640px 以下）では下の 4 割ほどのパネルを除く
+     * スマホ（幅 640px 以下）では下の 4 割ほどのパネルを除く。withPanel が false なら（パネルを出さないとき）、パネルの分は除かない
      */
-    const freeArea = () => {
+    const freeArea = (withPanel = true) => {
       if (W > 640) {
-        const left = 220, right = W - 300, top = 60, bottom = H - 80;
+        const left = 220, right = W - (withPanel ? 300 : 24), top = 60, bottom = H - 80;
         return { cx: (left + right) / 2, cy: (top + bottom) / 2, w: right - left, h: bottom - top };
       }
-      const top = 80, bottom = H - 74 - H * 0.4;
+      const top = 80, bottom = H - 74 - (withPanel ? H * 0.4 : 0);
       return { cx: W / 2, cy: (top + bottom) / 2, w: W, h: bottom - top };
     };
 
@@ -282,8 +282,8 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
      * 2. その拡大率でもはみ出す語があれば、収まるところまで視点をずらす（w はそのときだけ真ん中からずれる）
      * 名前は点の右に出るので、名前の幅も入るようにする
      */
-    const focusView = (w: Word, near: Word[]) => {
-      const area = freeArea(), pad = 24;
+    const focusView = (w: Word, near: Word[], withPanel = true) => {
+      const area = freeArea(withPanel), pad = 24;
       const L = area.cx - area.w / 2 + pad, R = area.cx + area.w / 2 - pad, T = area.cy - area.h / 2 + pad, B = area.cy + area.h / 2 - pad;
       // 名前の幅の見積もり（太字 14px。全角はほぼ 1 文字 14px）
       const label = (p: Word) => p.text.length * 14 + 12;
@@ -447,9 +447,9 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     } else {
       // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
       // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
-      view.x = intro.word.x;
-      view.y = intro.word.y;
-      view.s = fitScale() * 40;
+      // 検索で語に飛んだときと同じく、近い語が名前まで画面に収まる視点から始める
+      // （最初はパネルを出さないので、パネルの分は空けない）
+      Object.assign(view, focusView(intro.word, intro.neighbors, false));
       api.current?.select(intro.word, intro.neighbors, false);
       requestAnimationFrame(loop);
       setTimeout(() => {
