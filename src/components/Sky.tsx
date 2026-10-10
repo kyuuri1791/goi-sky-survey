@@ -263,30 +263,50 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     };
 
     /**
-     * 語 w と近い語が画面の半分ほどに収まる拡大率。2 次元に写したときに遠くへ離れてしまった近い語
-     * （ほかの近い語までの距離の中央値の 3 倍より遠いもの）は、引きすぎないよう計算から外す
-     */
-    /**
      * 語を選んだときに見せる、画面のうち隠れていない範囲（中心と幅・高さ）。
-     * スマホ（幅 640px 以下）ではパネルが下の 4 割ほどを覆うので、見出しの下からパネルの上までにする
+     * PC では右のパネル（300px ほど）、左下の凡例の列（220px ほど）、下の検索欄（80px ほど）を、
+     * スマホ（幅 640px 以下）では下の 4 割ほどのパネルを除く
      */
     const freeArea = () => {
-      if (W > 640) return { cx: W / 2, cy: H / 2, w: W, h: H };
+      if (W > 640) {
+        const left = 220, right = W - 300, top = 60, bottom = H - 80;
+        return { cx: (left + right) / 2, cy: (top + bottom) / 2, w: right - left, h: bottom - top };
+      }
       const top = 80, bottom = H - 74 - H * 0.4;
       return { cx: W / 2, cy: (top + bottom) / 2, w: W, h: bottom - top };
     };
 
-    const focusScale = (w: Word, near: Word[]) => {
-      const ds = near.map((n) => Math.hypot(n.x - w.x, n.y - w.y)).sort((a, b) => a - b);
-      const median = ds.length ? ds[Math.floor(ds.length / 2)] : 0;
-      let extent = 0;
+    /**
+     * 語 w と近い語が、名前まで全部、隠れていない範囲に収まる視点（中心と拡大率）。
+     * 1. w を範囲の真ん中に置いたまま全部が収まる拡大率にする（全体の表示＝1 倍より引かない）
+     * 2. その拡大率でもはみ出す語があれば、収まるところまで視点をずらす（w はそのときだけ真ん中からずれる）
+     * 名前は点の右に出るので、名前の幅も入るようにする
+     */
+    const focusView = (w: Word, near: Word[]) => {
+      const area = freeArea(), pad = 24;
+      const L = area.cx - area.w / 2 + pad, R = area.cx + area.w / 2 - pad, T = area.cy - area.h / 2 + pad, B = area.cy + area.h / 2 - pad;
+      // 名前の幅の見積もり（太字 14px。全角はほぼ 1 文字 14px）
+      const label = (p: Word) => p.text.length * 14 + 12;
+      let s = fitScale() * 400;
       for (const n of near) {
-        const d = Math.hypot(n.x - w.x, n.y - w.y);
-        if (d <= median * 3) extent = Math.max(extent, Math.abs(n.x - w.x), Math.abs(n.y - w.y));
+        const dx = n.x - w.x, dy = n.y - w.y;
+        if (dx > 0 && R - area.cx > label(n)) s = Math.min(s, (R - area.cx - label(n)) / dx);
+        if (dx < 0) s = Math.min(s, (area.cx - L) / -dx);
+        if (dy !== 0) s = Math.min(s, (dy > 0 ? B - area.cy : area.cy - T) / Math.abs(dy));
       }
-      const area = freeArea();
-      const s = (Math.min(area.w, area.h) * 0.3) / Math.max(extent, 0.0005);
-      return Math.min(fitScale() * 400, Math.max(fitScale() * 12, s));
+      s = Math.max(fitScale(), s);
+      // 範囲の真ん中に来る平面の位置 c の、全部が収まる幅を求め、その中で w に一番近いところを選ぶ
+      const fitAxis = (v: (p: Word) => number, lo: number, hi: number, center: number, extra: (p: Word) => number) => {
+        let cMin = -Infinity, cMax = Infinity;
+        for (const p of [w, ...near]) {
+          cMin = Math.max(cMin, v(p) - (hi - extra(p) - center) / s);
+          cMax = Math.min(cMax, v(p) - (lo - center) / s);
+        }
+        return cMin <= cMax ? Math.min(cMax, Math.max(cMin, v(w))) : (cMin + cMax) / 2;
+      };
+      const cx = fitAxis((p) => p.x, L, R, area.cx, label);
+      const cy = fitAxis((p) => p.y, T, B, area.cy, () => 0);
+      return { x: cx + (W / 2 - area.cx) / s, y: cy + (H / 2 - area.cy) / s, s };
     };
 
     api.current = {
@@ -296,9 +316,8 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         marks = [w, ...neighbors];
         lines = neighbors.map((n) => [w, n]);
         if (fly) {
-          // 語が、隠れていない範囲の真ん中に来るように視点をずらす
-          const s = focusScale(w, neighbors), area = freeArea();
-          flyTo(w.x + (W / 2 - area.cx) / s, w.y + (H / 2 - area.cy) / s, s);
+          const v = focusView(w, neighbors);
+          flyTo(v.x, v.y, v.s);
         }
       },
       goHome,
