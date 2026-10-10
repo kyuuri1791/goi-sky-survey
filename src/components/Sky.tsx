@@ -417,7 +417,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         .then((r) => r.json())
         .then((d) => {
           if (d.error) return;
-          api.current?.select(d.word, d.neighbors, false);
+          api.current?.select(d.word, d.neighbors, true);
           setPanel({ word: d.word, neighbors: d.neighbors, query: d.word.text });
         });
     };
