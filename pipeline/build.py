@@ -6,15 +6,14 @@
   4. UMAP で 2 次元に並べる
   5. IVF-PQ の索引を作る
   6. 全部の語の近い語を計算する
-  7. /out（= data/）に index.bin、neighbors.bin、meta.json を書き出す
+  7. /out（= data/）に words.bin、lookup.bin、index.bin、vectors-*.bin、neighbors.bin を書き出す（形式は store.py）
 
   python -m build             全部作る
-  python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/meta.json のまま）
-  python -m build index       索引だけ作り直す（配置は変えない）
+  python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/words.bin のまま）
+  python -m build index       索引と 1 バイトに丸めたベクトルだけ作り直す（配置は変えない）
   python -m build neighbors   近い語の表だけ作り直す（配置は変えない）
 """
 
-import json
 import sys
 import time
 from pathlib import Path
@@ -23,6 +22,7 @@ import index
 import neighbors
 import ngcrypt
 import sources
+import store
 from layout import layout
 from surface import analyze
 from vocab import kept_ids
@@ -64,6 +64,7 @@ def main() -> None:
         return
     if sys.argv[1:] == ["index"]:
         index.write(index.build(vecs), *vecs.shape, OUT)
+        store.write_vectors(OUT, vecs)
         log("索引")
         return
 
@@ -71,39 +72,39 @@ def main() -> None:
     display = [surf.get(w, w) for w in words]
     log(f"書き方・品詞・別名（書き方を変える語 {sum(w in surf for w in words)}）")
     if sys.argv[1:] == ["meta"]:
-        prev = json.loads((OUT / "meta.json").read_text())
-        if prev["word"] != words:
-            sys.exit("今の data/meta.json と語の並びが違うので、配置を使い回せません（python -m build で全部作り直してください）")
-        write_meta(words, display, pos, alias, ids, prev["x"], prev["y"])
+        prev_hash, x, y = store.read_positions(OUT / "words.bin")
+        if prev_hash != store.words_hash(words):
+            sys.exit("今の data/words.bin と語の並びが違うので、配置を使い回せません（python -m build で全部作り直してください）")
+        write_meta(words, display, pos, alias, ids, x, y)
         return
 
-    # float32 のまま丸めると JSON に 0.12345000267028809 のように書かれるので、float64 にしてから丸める
-    xy = layout(vecs).astype("float64").round(5)
+    xy = layout(vecs)
     log("配置")
 
     ix = index.build(vecs)
     index.write(ix, *vecs.shape, OUT)
+    store.write_vectors(OUT, vecs)
     log("索引")
 
     neighbors.write(vecs, OUT, log)
     log("近い語")
 
-    write_meta(words, display, pos, alias, ids, xy[:, 0].tolist(), xy[:, 1].tolist())
+    write_meta(words, display, pos, alias, ids, xy[:, 0], xy[:, 1])
 
 
 def write_meta(words, display, pos, alias, ids, x, y) -> None:
-    meta = {
-        "word": words,
-        "display": display,
-        "pos": [POS_CLASS.get(pos[w], 5) for w in words],
-        "x": x,
-        "y": y,
-        "rank": [i + 1 for i in ids],
-        "hidden": [0] * len(words),
-        "alias": aliases(words, display, alias),
-    }
-    (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")))
-    log(f"別名 {len(meta['alias'])}")
+    """語の情報（words.bin）と、検索で引く書き方の表（lookup.bin）を書く"""
+    store.write_words(OUT / "words.bin", words, display, x, y, [i + 1 for i in ids], [POS_CLASS.get(pos[w], 5) for w in words], [0] * len(words))
+    # 書き方そのもの（正規化表記と普段の書き方）を先に入れ、同じ書き方はよく使われる語（番号の小さい方）にする。そのあとに別名
+    entries: dict[str, tuple[int, int]] = {}
+    for i, (w, d) in enumerate(zip(words, display)):
+        for t in (w, d):
+            entries.setdefault(t, (i, 0))
+    extra = aliases(words, display, alias)
+    for t, i in extra.items():
+        entries.setdefault(t, (i, 1))
+    store.write_lookup(OUT / "lookup.bin", entries)
+    log(f"検索で引く書き方 {len(entries)}（うち別名 {len(extra)}）")
     for f in sorted(OUT.iterdir()):
         log(f"data/{f.name} {f.stat().st_size / 1e6:.1f}MB")
 

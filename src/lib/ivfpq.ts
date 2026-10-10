@@ -1,9 +1,9 @@
-// 使われ方の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin を使う。複合語の検索に使う。
+// 使われ方の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin を使う。複合語の検索で候補を大まかに絞る
+// （絞った候補の近さは、src/lib/words.ts で 1 バイトに丸めたベクトルから計算し直す）。
 //
 // IVF: 語をグループに分けておき、問い合わせに近い nprobe グループの中だけ調べる
 // PQ:  各語のベクトル（グループの中心からのずれ）を区切りごとの代表の番号（1 バイト × M）で持ち、
 //      類似度を「区切りごとの表を引いて足すだけ」で見積もる
-// すべてメモリの上で済ませる（デプロイ先ではファイルを拾い読みすると、初めて読む所ごとに遅くなるため）。
 //
 // index.bin の形式（リトルエンディアン）:
 //   u32 × 8   マジック "IVQ1"、語数 n、次元 DIM、グループ数 NLIST、区切り数 M、代表の数 KS、予約 × 2
@@ -30,9 +30,6 @@ export class IvfPq {
   private readonly start: Uint32Array;
   private readonly order: Uint32Array;
   private readonly codes: Uint8Array;
-  /** 語の番号 → order の位置と、入っているグループ */
-  private readonly posOf: Uint32Array;
-  private readonly listOf: Uint16Array;
 
   constructor(indexPath: string) {
     const buf = fs.readFileSync(indexPath);
@@ -52,27 +49,8 @@ export class IvfPq {
     this.start = take((o) => new Uint32Array(bytes.buffer, o, this.nlist + 1), (this.nlist + 1) * 4);
     this.order = take((o) => new Uint32Array(bytes.buffer, o, this.n), this.n * 4);
     this.codes = new Uint8Array(bytes.buffer, off, this.n * this.m);
-    this.posOf = new Uint32Array(this.n);
-    this.listOf = new Uint16Array(this.n);
-    for (let c = 0; c < this.nlist; c++) {
-      for (let j = this.start[c]; j < this.start[c + 1]; j++) {
-        this.posOf[this.order[j]] = j;
-        this.listOf[this.order[j]] = c;
-      }
-    }
   }
 
-  /** 語 id のベクトル（グループの中心と、区切りごとの代表から組み立てた近似） */
-  vector(id: number): Float32Array {
-    const { dim, m, ks, sub } = this;
-    const v = this.coarse.slice(this.listOf[id] * dim, (this.listOf[id] + 1) * dim);
-    const o = this.posOf[id] * m;
-    for (let mm = 0; mm < m; mm++) {
-      const bo = (mm * ks + this.codes[o + mm]) * sub;
-      for (let d = 0; d < sub; d++) v[mm * sub + d] += this.books[bo + d];
-    }
-    return v;
-  }
 
   /**
    * q に使われ方の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。

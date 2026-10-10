@@ -1,13 +1,15 @@
 import "server-only";
-import type { Hit } from "./ivfpq.ts";
-import { getByText, getHiddenIds, getIndex, getMeta, getNeighbors, MAX_PART_LEN, NEIGHBORS } from "./server-data.ts";
+import { getHiddenIds, getIndex, getLookup, getNeighbors, getVectors, getWords, MAX_PART_LEN, NEIGHBORS } from "./server-data.ts";
 
 /** ブラウザに返す語の情報 */
 export type WordInfo = { id: number; text: string; x: number; y: number; rank: number; pos: number; score?: number };
 
+/** 位置は小数 5 桁に丸めて返す（f32 のまま JSON にすると桁が多くなる） */
+const round5 = (v: number) => Math.round(v * 1e5) / 1e5;
+
 export function info(id: number, score?: number): WordInfo {
-  const meta = getMeta();
-  return { id, text: meta.display[id], x: meta.x[id], y: meta.y[id], rank: meta.rank[id], pos: meta.pos[id], ...(score === undefined ? {} : { score: Math.round(score * 1000) / 1000 }) };
+  const w = getWords();
+  return { id, text: w.display(id), x: round5(w.x[id]), y: round5(w.y[id]), rank: w.rank[id], pos: w.pos[id], ...(score === undefined ? {} : { score: Math.round(score * 1000) / 1000 }) };
 }
 
 /**
@@ -16,23 +18,20 @@ export function info(id: number, score?: number): WordInfo {
  * 切るときの別名は 3 文字以上に限る（「冬のこたつ」の「のこ」が「野小」になったりしないように）
  */
 export function resolve(text: string): number[] | null {
-  const byText = getByText();
-  const { alias } = getMeta();
-  const byAlias = (s: string) => (Object.hasOwn(alias, s) ? alias[s] : undefined);
+  const lookup = getLookup();
   const t = text.trim();
   if (!t) return null;
-  const whole = byText.get(t) ?? byAlias(t);
-  if (whole !== undefined) return [whole];
+  const whole = lookup(t);
+  if (whole) return [whole.id];
   const out: number[] = [];
   let i = 0;
   while (i < t.length) {
     let found = -1;
     let len = 0;
     for (let l = Math.min(MAX_PART_LEN, t.length - i); l >= 1; l--) {
-      const part = t.slice(i, i + l);
-      const id = byText.get(part) ?? (l >= 3 ? byAlias(part) : undefined);
-      if (id !== undefined) {
-        found = id;
+      const hit = lookup(t.slice(i, i + l));
+      if (hit && (!hit.alias || l >= 3)) {
+        found = hit.id;
         len = l;
         break;
       }
@@ -45,11 +44,11 @@ export function resolve(text: string): number[] | null {
 }
 
 /** 語の番号の列のベクトルを足し合わせる */
-export function combine(ids: number[]): Float32Array {
-  const index = getIndex();
-  const v = new Float32Array(index.dim);
+export async function combine(ids: number[]): Promise<Float32Array> {
+  const vectors = await getVectors();
+  const v = new Float32Array(vectors.dim);
   for (const id of ids) {
-    const w = index.vector(id);
+    const w = vectors.vector(id);
     for (let d = 0; d < v.length; d++) v[d] += w[d];
   }
   return v;
@@ -66,8 +65,20 @@ export function neighborsOf(id: number): WordInfo[] {
   return out;
 }
 
-/** v に使われ方の近い語（索引で探す。複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
-export function nearest(v: Float32Array, k: number, exclude: number[] = []): WordInfo[] {
+/** 索引で大まかに絞る候補の数。この中から、1 バイトに丸めたベクトルで近さを計算し直して上位を決める */
+const CANDIDATES = 200;
+
+/** v に使われ方の近い語（複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
+export async function nearest(v: Float32Array, k: number, exclude: number[] = []): Promise<WordInfo[]> {
   const ex = new Set([...getHiddenIds(), ...exclude]);
-  return getIndex().search(v, k, ex).map((h: Hit) => info(h.id, h.score));
+  const vectors = await getVectors();
+  let qn = 0;
+  for (const x of v) qn += x * x;
+  qn = Math.sqrt(qn) || 1;
+  return getIndex()
+    .search(v, CANDIDATES, ex)
+    .map(({ id }) => ({ id, score: vectors.dot(id, v) / qn }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k)
+    .map((h) => info(h.id, h.score));
 }
