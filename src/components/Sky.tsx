@@ -482,20 +482,16 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     history.replaceState(null, "", url);
   }, [panel]);
 
-  /** 今の語の URL を共有する。スマホなどでは端末の共有メニューを開き、できなければ URL をコピーする */
-  const share = async () => {
+  /**
+   * 今の語の URL を X で共有する（投稿画面を別のタブで開く）。
+   * 文には検索した語だけを入れ、近い語は入れない（偏った連想がそのまま広がらないように。近い語は開いた人がアプリで見る）
+   */
+  const share = () => {
     if (!panel) return;
-    const url = location.href;
-    if (navigator.share) {
-      await navigator.share({ title: `${panel.word.text}｜日本語語彙スカイサーベイ`, url }).catch(() => {});
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setMsg("リンクをコピーしました");
-    } catch {
-      setMsg(url);
-    }
+    const intent = new URL("https://x.com/intent/tweet");
+    intent.searchParams.set("text", `「${panel.query}」の使われ方の近い語｜日本語語彙スカイサーベイ`);
+    intent.searchParams.set("url", location.href);
+    window.open(intent, "_blank", "noopener,noreferrer");
   };
 
   const posName = (p: number) => POS_NAMES[p] ?? "";
@@ -527,7 +523,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
           <div className="head">
             <h2 style={{ color: posColor(panel.word.pos) }}>{panel.word.text}</h2>
             <button className="link" onClick={share}>
-              共有
+              Xで共有
             </button>
           </div>
           <dl>
