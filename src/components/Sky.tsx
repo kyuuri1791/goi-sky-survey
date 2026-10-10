@@ -105,6 +105,72 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
     // 直前のフレームで描いた点と名前の位置（タップでどの語を選ぶか決めるのに使う）
     let hitDots: { x: number; y: number; a: number; id: number }[] = [];
     let hitLabels: { x: number; y: number; w: number; h: number; id: number }[] = [];
+    /** 語の名前の濃さ（0〜1）。出す・消すときは少しずつ変えて、密集した所で名前が点滅して見えないようにする */
+    const labelAlpha = new Map<number, number>();
+    /** 語の名前の幅（語ごとに文字の大きさが決まっているので、一度測ったら使い回す） */
+    const labelWidth = new Map<number, number>();
+    let lastFrame = 0;
+
+    /**
+     * 語の名前を、すでに置いた名前と重ならないものだけ出す。
+     * 画面のマス目で決めると、動かすたびに境目が変わって密集した所で名前が入れ替わり、点滅して見えるので、名前どうしの重なりで決める。
+     * いま出ている名前（消えかけのものも含む）を先に置いて場所を確保し、そのあとによく使われる語から順に置く
+     * （新しい名前が、消えかけの名前の上に重なって現れないように）。出すときは 0.25 秒、消すときは 0.12 秒ほどかけて、なめらかに濃さを変える
+     */
+    const drawLabels = (
+      cands: { id: number; text: string; x: number; y: number; size: number; color: [number, number, number]; a: number }[],
+      labelMax: number,
+      t: number,
+    ) => {
+      const step = Math.min(1, (t - lastFrame) / 250);
+      lastFrame = t;
+      const placed: { x: number; y: number; w: number; h: number }[] = [];
+      const cell = 64, grid = new Map<string, number[]>();
+      /** 名前の四角がかかるマス目（置いた名前は、かかるマス目すべてに登録する） */
+      const cellsOf = (b: { x: number; y: number; w: number; h: number }) => {
+        const keys: string[] = [];
+        for (let gx = Math.floor(b.x / cell); gx <= Math.floor((b.x + b.w) / cell); gx++) {
+          for (let gy = Math.floor(b.y / cell); gy <= Math.floor((b.y + b.h) / cell); gy++) keys.push(`${gx},${gy}`);
+        }
+        return keys;
+      };
+      const overlaps = (b: { x: number; y: number; w: number; h: number }) =>
+        cellsOf(b).some((key) =>
+          (grid.get(key) ?? []).some((k) => {
+            const o = placed[k];
+            return b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h;
+          }),
+        );
+      const seen = new Set<number>();
+      const order = [...cands.filter((c) => labelAlpha.has(c.id)), ...cands.filter((c) => !labelAlpha.has(c.id))];
+      for (const c of order) {
+        seen.add(c.id);
+        ctx.font = `500 ${c.size}px 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
+        let w = labelWidth.get(c.id);
+        if (w === undefined) labelWidth.set(c.id, (w = ctx.measureText(c.text).width));
+        const box = { x: c.x - 2, y: c.y - c.size * 0.7, w: w + 4, h: c.size * 1.4 };
+        const free = !overlaps(box);
+        const show = c.id < labelMax && free;
+        // 消すときは出すときの倍の速さにする（動かして名前どうしがぶつかったとき、重なって見える時間を短くする）
+        const alpha = Math.max(0, Math.min(1, (labelAlpha.get(c.id) ?? 0) + (show ? step : -2 * step)));
+        if (alpha <= 0) {
+          labelAlpha.delete(c.id);
+          continue;
+        }
+        // 出ている名前と、消えかけの名前は、場所を確保する
+        if (free) {
+          const k = placed.push(box) - 1;
+          for (const key of cellsOf(box)) grid.set(key, [...(grid.get(key) ?? []), k]);
+        }
+        labelAlpha.set(c.id, alpha);
+        // 出始めと出終わりがなめらかになるよう、濃さを曲線で変える
+        ctx.fillStyle = `rgba(${c.color.join(",")},${c.a * alpha * alpha * (3 - 2 * alpha)})`;
+        ctx.fillText(c.text, c.x, c.y);
+        if (show) hitLabels.push({ x: c.x, y: box.y, w, h: box.h, id: c.id });
+      }
+      // 画面の外に出た語などは、濃さの記録を消す
+      for (const id of labelAlpha.keys()) if (!seen.has(id)) labelAlpha.delete(id);
+    };
 
     const draw = (t: number) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -144,7 +210,8 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
       // 名前を出す語の数（よく使われる順）。全体を見ているとき（拡大率 1）は出さず、拡大するにつれて増やす。
       // 窓の大きさを変えると拡大率が 1 から少しずれるので、1.3 倍ほどまでは出さない
       const labelMax = 40 * Math.max(0, z ** 1.7 - 1.5);
-      const taken = new Set<string>();
+      // 名前の候補。点を描きながら集め、あとで重ならないものだけ出す
+      const labelCands: { id: number; text: string; x: number; y: number; size: number; color: [number, number, number]; a: number }[] = [];
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       const drawStar = (x: number, y: number, id: number, pos: number, text: string, hi: boolean) => {
@@ -169,16 +236,9 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         ctx.arc(sx, sy, r, 0, Math.PI * 2);
         ctx.fill();
         hitDots.push({ x: sx, y: sy, a, id });
-        if (!hi && id < labelMax) {
-          const key = `${Math.floor(sx / 64)},${Math.floor(sy / 21)}`;
-          if (!taken.has(key)) {
-            taken.add(key);
-            const size = Math.max(10, 14 - mag * 1.2);
-            ctx.font = `500 ${size}px 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
-            ctx.fillStyle = `rgba(${cr},${cg},${cb},${Math.min(1, a + 0.15) * fade})`;
-            ctx.fillText(text, sx + r + 4, sy);
-            hitLabels.push({ x: sx + r + 4, y: sy - size * 0.7, w: ctx.measureText(text).width, h: size * 1.4, id });
-          }
+        if (!hi && (id < labelMax || labelAlpha.has(id))) {
+          // 名前の濃さには、星のまたたき（tw）を入れない（名前がちらつかないように）
+          labelCands.push({ id, text, x: sx + r + 4, y: sy, size: Math.max(10, 14 - mag * 1.2), color: [cr, cg, cb], a: Math.min(1, a / tw + 0.15) * fade });
         }
         return [sx, sy, r];
       };
@@ -186,6 +246,7 @@ export default function Sky({ home, intro, baseTile }: { home: HomeView; intro: 
         if (p.id > vis * 1.2) break;
         if (!markIds.has(p.id)) drawStar(p.x, p.y, p.id, p.pos, p.text, false);
       }
+      drawLabels(labelCands, labelMax, t);
       // 選んだ語の周り: 必ず描き、名前は重ならない所へ
       ctx.globalAlpha = fade;
       const boxes: { x: number; y: number; w: number; h: number }[] = [];
