@@ -1,5 +1,5 @@
-import { CDN_CACHE, loadAll } from "@/server/data.ts";
-import { combine, info, nearest, resolve, wordResult } from "@/server/words.ts";
+import { CDN_CACHE, loadAll } from "@/lib/data.ts";
+import { combine, info, nearest, resolve, wordResult } from "@/lib/words.ts";
 
 // 語を探す: /api/word/猫(語は ?w= ではなくパスに入れる。CDN が ? 以降をキャッシュの区別に使わない設定でも、語ごとに別の答えとして覚えさせるため)
 // 語彙にない複合語は語彙にある語に分けて意味を合わせ、その近くの語を返す(composite に分けた語)

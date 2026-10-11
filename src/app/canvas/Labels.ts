@@ -1,6 +1,6 @@
 // 語の名前を置く場所と濃さを決める(描くのは Renderer)
 import type { Rgb } from "@/app/styles/pos.ts";
-import type { Word } from "@/shared/types.ts";
+import type { Word } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
 
 export type Box = { x: number; y: number; w: number; h: number };

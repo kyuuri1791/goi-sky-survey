@@ -1,6 +1,6 @@
 import "server-only";
-import { MAX_LEVEL, levelOf, tileIndex } from "@/shared/levels.ts";
-import type { TilePoint } from "@/shared/types.ts";
+import { MAX_LEVEL, levelOf, tileIndex } from "./levels.ts";
+import type { TilePoint } from "@/types.ts";
 import { getHiddenIds, getWords } from "./data.ts";
 import { round5 } from "./words.ts";
 

@@ -8,8 +8,8 @@ import About from "@/app/components/About/About.tsx";
 import Panel, { type PanelData } from "@/app/components/Panel/Panel.tsx";
 import { POS_NAMES, posColor } from "@/app/styles/pos.ts";
 import ui from "@/app/styles/ui.module.css";
-import type { HomeView } from "@/shared/levels.ts";
-import type { TilePoint, WordResult } from "@/shared/types.ts";
+import type { HomeView } from "@/lib/levels.ts";
+import type { TilePoint, WordResult } from "@/types.ts";
 import styles from "./App.module.css";
 import { CURATED_WORDS } from "./curated.ts";
 

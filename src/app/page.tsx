@@ -1,7 +1,7 @@
 import App from "@/app/components/App/App.tsx";
-import { homeView } from "@/server/home.ts";
-import { tile } from "@/server/tiles.ts";
-import { resolve, wordResult } from "@/server/words.ts";
+import { homeView } from "@/lib/home.ts";
+import { tile } from "@/lib/tiles.ts";
+import { resolve, wordResult } from "@/lib/words.ts";
 
 /** 最初に見せる語 */
 const INTRO_WORD = "猫";

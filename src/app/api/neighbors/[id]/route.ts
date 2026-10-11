@@ -1,5 +1,5 @@
-import { CDN_CACHE, getHiddenIds, getWords, loadAll } from "@/server/data.ts";
-import { wordResult } from "@/server/words.ts";
+import { CDN_CACHE, getHiddenIds, getWords, loadAll } from "@/lib/data.ts";
+import { wordResult } from "@/lib/words.ts";
 
 // 星を押したとき: /api/neighbors/123
 export async function GET(_request: Request, ctx: RouteContext<"/api/neighbors/[id]">) {

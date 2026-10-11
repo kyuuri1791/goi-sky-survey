@@ -1,6 +1,6 @@
 import { posColor, posName } from "@/app/styles/pos.ts";
 import ui from "@/app/styles/ui.module.css";
-import type { Word, WordResult } from "@/shared/types.ts";
+import type { Word, WordResult } from "@/types.ts";
 import styles from "./Panel.module.css";
 
 export type PanelData = WordResult & { query: string };

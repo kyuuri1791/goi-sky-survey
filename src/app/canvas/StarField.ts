@@ -1,6 +1,6 @@
 // 地図の点。全体の星(段 0 のタイル)から始めて、見えている範囲と拡大率に要るタイル(/api/tiles)を読み足していく
-import { MAX_LEVEL, tileIndex, visibleCount } from "@/shared/levels.ts";
-import type { TilePoint } from "@/shared/types.ts";
+import { MAX_LEVEL, tileIndex, visibleCount } from "@/lib/levels.ts";
+import type { TilePoint } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
 
 export type Star = { x: number; y: number; id: number; pos: number; text: string };

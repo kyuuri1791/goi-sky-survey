@@ -1,5 +1,5 @@
 import "server-only";
-import type { Word, WordResult } from "@/shared/types.ts";
+import type { Word, WordResult } from "@/types.ts";
 import { getHiddenIds, getIndex, getLookup, getNeighbors, getVectors, getWords, MAX_PART_LEN, NEIGHBORS } from "./data.ts";
 
 /** ブラウザに渡す位置は小数 5 桁に丸める(f32 のまま JSON にすると桁が多くなる) */

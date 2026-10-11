@@ -1,5 +1,5 @@
 // 選んだ語と近い語(地図の目印)。目印を薄くして消している途中かどうかも持つ
-import type { Word } from "@/shared/types.ts";
+import type { Word } from "@/types.ts";
 
 /** 目印を薄くして消すのにかける時間 */
 const FADE_MS = 800;

@@ -1,8 +1,8 @@
 // 単語を使われ方の近さで並べた平面を、canvas に暗い背景に光る点として描く地図。App から使うのはこのクラスだけ。
 // 視点(Camera)・点(StarField)・選んだ語(Selection)・描画(Renderer)・操作(Input)を持ち、毎フレームのループを回す。
 // タップした語は onTap で知らせる(語を引いてパネルに出すのは呼んだ側)
-import type { HomeView } from "@/shared/levels.ts";
-import type { TilePoint, Word } from "@/shared/types.ts";
+import type { HomeView } from "@/lib/levels.ts";
+import type { TilePoint, Word } from "@/types.ts";
 import { Camera } from "./Camera.ts";
 import { Input } from "./Input.ts";
 import { Renderer } from "./Renderer.ts";

@@ -1,5 +1,5 @@
 import "server-only";
-import type { HomeView } from "@/shared/levels.ts";
+import type { HomeView } from "./levels.ts";
 import { getWords } from "./data.ts";
 import { round5 } from "./words.ts";
 

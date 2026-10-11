@@ -1,6 +1,6 @@
 // 視点: 画面の真ん中に来る平面の位置と、拡大の大きさ。平面の座標と画面の座標の変換と、視点を動かすアニメーションも受け持つ
-import type { HomeView } from "@/shared/levels.ts";
-import type { Word } from "@/shared/types.ts";
+import type { HomeView } from "@/lib/levels.ts";
+import type { Word } from "@/types.ts";
 import { MARK_FONT_SIZE } from "./style.ts";
 
 /** 画面の真ん中に来る平面の位置 (x, y) と、平面の長さ 1 が画面の何 px か (s) */

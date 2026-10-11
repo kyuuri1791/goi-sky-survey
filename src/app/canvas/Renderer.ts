@@ -1,8 +1,8 @@
 // 地図を描く: 背景、点、語の名前、選んだ語と近い語の目印。
 // 直前に描いた点と名前の位置を覚えておき、タップでどの語を選ぶか決めるのにも使う
 import { posColor, posRgb } from "@/app/styles/pos.ts";
-import { visibleCount } from "@/shared/levels.ts";
-import type { Word } from "@/shared/types.ts";
+import { visibleCount } from "@/lib/levels.ts";
+import type { Word } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
 import { type Box, type LabelCand, Labels, placeMarkLabels } from "./Labels.ts";
 import type { Selection } from "./Selection.ts";
