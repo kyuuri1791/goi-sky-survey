@@ -1,10 +1,9 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { IvfPq } from "./ivfpq.ts";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { getLoadablePath } from "sqlite-vec";
 
-/** neighbors.bin に入っている、語ごとの近い語の数(pipeline/neighbors.py の K) */
-export const NEIGHBORS = 8;
 /** 複合語を分けるときに試す、一番長い語の文字数 */
 export const MAX_PART_LEN = 20;
 
@@ -19,148 +18,47 @@ const cache = (g.__goi ??= new Map());
 export const CDN_CACHE = { "Cache-Control": "public, max-age=0, s-maxage=31536000" };
 
 /** 最初に呼ばれたときに make で作り、以後は使い回す */
-function once<T>(key: string, make: () => T): () => T {
-  return () => {
-    if (!cache.has(key)) cache.set(key, make());
-    return cache.get(key) as T;
-  };
+function once<T>(key: string, make: () => T): T {
+  if (!cache.has(key)) cache.set(key, make());
+  return cache.get(key) as T;
 }
 
-/** ファイルの中を、前から順に型付き配列として切り出していく(形式は pipeline/store.py) */
-function reader(buf: Buffer, start: number) {
-  let off = start;
-  // 位置が 4 バイト単位にそろっていなくても読めるよう、その部分だけ複製する(どれも小さい)
-  const take = (bytes: number) => {
-    const b = buf.buffer.slice(buf.byteOffset + off, buf.byteOffset + off + bytes);
-    off += bytes;
-    return b;
-  };
-  return {
-    f32: (n: number) => new Float32Array(take(n * 4)),
-    u32: (n: number) => new Uint32Array(take(n * 4)),
-    u8: (n: number) => new Uint8Array(take(n)),
-    /** 次の 4 バイト単位の位置まで進める */
-    pad: () => void (off += (4 - (off % 4)) % 4),
-    rest: () => buf.subarray(off),
-  };
+/** ベクトルのファイル(GitHub の 1 ファイルの上限を超えないよう分けてある) */
+const vectorFiles = () => once("vectorFiles", () => fs.readdirSync(DIR).filter((f) => /^vectors-\d+\.db$/.test(f)));
+
+/**
+ * データ(data/*.db。表の形は pipeline/store.py、pipeline/vectors.py)。words.db を開き、近い語とベクトルのファイルをつなぐ。
+ * SQLite は使う部分だけファイルから読むので、全部(300MB ほど)をメモリに載せない
+ */
+function db(): DatabaseSync {
+  return once("db", () => {
+    const db = new DatabaseSync(path.join(DIR, "words.db"), { readOnly: true, allowExtension: true });
+    db.loadExtension(getLoadablePath());
+    db.prepare("attach ? as neighbors").run(path.join(DIR, "neighbors.db"));
+    vectorFiles().forEach((f, i) => db.prepare(`attach ? as vectors${i}`).run(path.join(DIR, f)));
+    return db;
+  });
 }
 
-export type Words = {
-  n: number;
-  x: Float32Array;
-  y: Float32Array;
-  rank: Uint32Array;
-  pos: Uint8Array;
-  hidden: Uint8Array;
-  /** 語 id の表示の書き方 */
-  display: (id: number) => string;
-};
+/** SQL を準備する(同じ SQL は使い回す) */
+export function sql(text: string): StatementSync {
+  return once(`sql:${text}`, () => db().prepare(text));
+}
 
-/** 単語の情報(data/words.bin)。位置・頻度順位・品詞・表示の書き方 */
-export const getWords = once("words", (): Words => {
-  const buf = fs.readFileSync(path.join(DIR, "words.bin"));
-  if (buf.toString("latin1", 0, 4) !== "GWD1") throw new Error("words.bin の形式が違います");
-  const n = buf.readUInt32LE(4);
-  const r = reader(buf, 20);
-  const x = r.f32(n), y = r.f32(n), rank = r.u32(n), pos = r.u8(n), hidden = r.u8(n);
-  r.pad();
-  const offs = r.u32(n + 1);
-  const blob = r.rest();
-  return { n, x, y, rank, pos, hidden, display: (id) => blob.toString("utf8", offs[id], offs[id + 1]) };
-});
+/** ベクトルの表ごとに SQL を作り、union all でつなぐ */
+const eachVectors = (make: (table: string) => string) => vectorFiles().map((_, i) => make(`vectors${i}.vectors`)).join(" union all ");
 
-/** 隠す語(不適切な言葉)。検索結果に出さない */
-export const getHiddenIds = once("hidden", () => {
-  const { hidden } = getWords();
-  return new Set(Array.from(hidden.keys()).filter((id) => hidden[id]));
-});
+/** 語 id の、1 バイトに丸めたベクトル(語ごとに長さが違う) */
+export function vectorOf(id: number): Int8Array {
+  const { embedding } = sql(eachVectors((t) => `select embedding from ${t} where rowid = ?1`)).get(id) as { embedding: Uint8Array };
+  return new Int8Array(embedding.buffer, embedding.byteOffset, embedding.length);
+}
 
-/**
- * 書き方 → 語の番号(data/lookup.bin を二分探索で引く)。alias は、読みや別の書き方で引けたとき true。
- * 書き方そのもの(正規化表記・普段の書き方)が同じなら、よく使われる語が入っている
- */
-export const getLookup = once("lookup", () => {
-  const buf = fs.readFileSync(path.join(DIR, "lookup.bin"));
-  if (buf.toString("latin1", 0, 4) !== "GLK1") throw new Error("lookup.bin の形式が違います");
-  const m = buf.readUInt32LE(4);
-  const r = reader(buf, 8);
-  const offs = r.u32(m + 1), ids = r.u32(m), kind = r.u8(m);
-  r.pad();
-  const blob = r.rest();
-  return (text: string): { id: number; alias: boolean } | undefined => {
-    const q = Buffer.from(text);
-    let lo = 0, hi = m - 1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      const c = q.compare(blob, offs[mid], offs[mid + 1]);
-      if (c === 0) return { id: ids[mid], alias: kind[mid] === 1 };
-      if (c < 0) hi = mid - 1;
-      else lo = mid + 1;
-    }
-    return undefined;
-  };
-});
-
-/** 前もって計算した近い語(語ごとに NEIGHBORS 個、近い順)と、その近さ × 10000。番号(u32)の並びのあとに近さ(i16)の並び */
-export const getNeighbors = once("neighbors", () => {
-  const nb = fs.readFileSync(path.join(DIR, "neighbors.bin"));
-  const count = getWords().n * NEIGHBORS;
-  return {
-    ids: new Uint32Array(nb.buffer.slice(nb.byteOffset, nb.byteOffset + count * 4)),
-    scores: new Int16Array(nb.buffer.slice(nb.byteOffset + count * 4, nb.byteOffset + count * 6)),
-  };
-});
-
-/** 使われ方の近い語を探すインデックス(複合語の検索だけで使う)。候補を大まかに絞る */
-export const getIndex = once("index", () => new IvfPq(path.join(DIR, "index.bin")));
-
-export type Vectors = {
-  dim: number;
-  /** 語 id のベクトル(1 バイトに丸めたものを戻す。長さはほぼ 1) */
-  vector: (id: number) => Float32Array;
-  /** 語 id のベクトルと q の内積 */
-  dot: (id: number, q: Float32Array) => number;
-};
-
-/**
- * 1 バイトに丸めた全部の語のベクトル(data/vectors-*.bin。語ごとに倍率 f32 ＋ i8 × 300)。複合語の検索で、
- * 分けた語のベクトルを足すときと、インデックスで絞った候補の近さを計算し直すときに使う。
- * 全部で 120MB ほどあるが、1 回の検索で使うのは数百語ぶんなので、メモリには載せず、使う語の分だけファイルから読む
- */
-export const getVectors = once("vectors", (): Vectors => {
-  const files = fs.readdirSync(DIR).filter((f) => /^vectors-\d+\.bin$/.test(f)).sort((a, b) => parseInt(a.slice(8)) - parseInt(b.slice(8)));
-  const fds = files.map((f) => fs.openSync(path.join(DIR, f), "r"));
-  const dim = getIndex().dim, row = 4 + dim;
-  const perFile = fs.fstatSync(fds[0]).size / row;
-  const read = (id: number) => {
-    const f = Math.floor(id / perFile), b = Buffer.alloc(row);
-    fs.readSync(fds[f], b, 0, row, (id - f * perFile) * row);
-    return { scale: b.readFloatLE(0), i8: new Int8Array(b.buffer, b.byteOffset + 4, dim) };
-  };
-  return {
-    dim,
-    vector(id) {
-      const { scale, i8 } = read(id);
-      return Float32Array.from(i8, (x) => x * scale);
-    },
-    dot(id, q) {
-      const { scale, i8 } = read(id);
-      let t = 0;
-      for (let d = 0; d < dim; d++) t += q[d] * i8[d];
-      return t * scale;
-    },
-  };
-});
-
-/**
- * データを全部読み込む(2 回目からは何もしない)。どの API でも最初に呼ぶ。
- * デプロイ先は、要求が重なるとサーバーを何台も立ち上げて振り分ける。どのサーバーでも最初の検索が待たされないよう、
- * 最初の要求で全部読んでおく
- */
-export function loadAll() {
-  getHiddenIds();
-  getLookup();
-  getNeighbors();
-  getIndex();
-  getVectors();
+/** 1 バイトに丸めた q と cos で比べて、近い順に上位 k 語(sqlite-vec で全部の語と比べる)。score は cos 類似度 */
+export function nearestVectors(q: Int8Array, k: number): { id: number; score: number }[] {
+  const rows = sql(`${eachVectors((t) => `select rowid as id, distance from ${t} where embedding match vec_int8(?1) and k = ?2`)} order by distance limit ?2`).all(
+    new Uint8Array(q.buffer, q.byteOffset, q.length),
+    k,
+  ) as { id: number; distance: number }[];
+  return rows.map(({ id, distance }) => ({ id, score: 1 - distance }));
 }

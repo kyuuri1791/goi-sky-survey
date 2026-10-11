@@ -13,7 +13,7 @@
     "ng:edit": "docker compose -f pipeline/compose.yaml run --rm --user $(id -u):$(id -g) pipeline ngcrypt edit"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -23,6 +23,7 @@
   "dependencies": {
     "next": "16.3.8",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sqlite-vec": "0.1.9"
   }
 }
