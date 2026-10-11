@@ -4,7 +4,7 @@ import { posColor, posRgb } from "@/app/styles/pos.ts";
 import { visibleCount } from "@/lib/levels.ts";
 import type { Word } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
-import { type Box, type LabelCand, Labels, placeMarkLabels } from "./Labels.ts";
+import { type Box, type LabelCand, Labels, MarkLabels } from "./Labels.ts";
 import type { Selection } from "./Selection.ts";
 import type { Star, StarField } from "./StarField.ts";
 import { labelFont, MARK_FONT } from "./style.ts";
@@ -14,6 +14,7 @@ type Frame = { t: number; z: number; vis: number; labelMax: number; labelCands: 
 
 export class Renderer {
   private labels = new Labels();
+  private markLabels = new MarkLabels();
   // 直前のフレームで描いた点と名前の位置
   private hitDots: { x: number; y: number; a: number; id: number }[] = [];
   private hitLabels: (Box & { id: number })[] = [];
@@ -158,7 +159,7 @@ export class Renderer {
   private drawMarkLabels(selection: Selection) {
     const { ctx } = this;
     ctx.font = MARK_FONT;
-    for (const { word, sx, sy, spot, leader } of placeMarkLabels(selection.marks, selection.word?.id, this.camera, (text) => ctx.measureText(text).width)) {
+    for (const { word, sx, sy, spot, leader } of this.markLabels.place(selection.marks, selection.word?.id, this.camera, (text) => ctx.measureText(text).width)) {
       this.hitLabels.push({ ...spot, id: word.id });
       if (leader) {
         ctx.strokeStyle = "rgba(220,228,245,0.5)";

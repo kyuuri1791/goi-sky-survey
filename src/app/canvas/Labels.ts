@@ -95,29 +95,49 @@ export type MarkLabel = { word: Word; sx: number; sy: number; spot: Box; leader:
 
 /**
  * 選んだ語と近い語の名前を、点の周りの重ならない所に置く。
- * まず点のすぐ隣(右・左・上・下)を試し、空いていなければ点から少しずつ離して探す。measure: 名前の幅を測る
+ * まず点のすぐ隣(右・左・上・下)を試し、空いていなければ点から少しずつ離して探す。
+ * 動かしている間に置き場所が毎フレーム入れ替わると名前が跳ねて見えるので、前のフレームの置き場所が空いていればそのまま使う
+ * (離して置いていた名前は、すぐ隣が空けばそちらへ戻す)
  */
-export function placeMarkLabels(marks: Word[], selectedId: number | undefined, camera: Camera, measure: (text: string) => number): MarkLabel[] {
-  const boxes: Box[] = [];
-  const out: MarkLabel[] = [];
-  for (const m of marks) {
-    const [sx, sy] = camera.toScreen(m.x, m.y);
-    if (!camera.isOnScreen(sx, sy)) continue;
-    const r = selectedId === m.id ? 3.5 : 2.8;
-    const w = measure(m.text);
-    const near = [[sx + r + 5, sy - 9], [sx - r - 5 - w, sy - 9], [sx - w / 2, sy - r - 22], [sx - w / 2, sy + r + 4]];
-    const far: number[][] = [];
-    for (let d = 26; d <= 110; d += 21) {
-      for (let k = 0; k < 12; k++) {
-        const th = (k / 12) * Math.PI * 2;
-        far.push([sx + Math.cos(th) * d - (Math.cos(th) < -0.2 ? w : Math.cos(th) > 0.2 ? 0 : w / 2), sy + Math.sin(th) * d - 9]);
+export class MarkLabels {
+  /** 語ごとの、前のフレームで使った置き場所の番号(候補の並びの中の位置) */
+  private prev = new Map<number, number>();
+
+  /** measure: 名前の幅を測る */
+  place(marks: Word[], selectedId: number | undefined, camera: Camera, measure: (text: string) => number): MarkLabel[] {
+    const boxes: Box[] = [];
+    const out: MarkLabel[] = [];
+    const next = new Map<number, number>();
+    for (const m of marks) {
+      const [sx, sy] = camera.toScreen(m.x, m.y);
+      if (!camera.isOnScreen(sx, sy)) continue;
+      const r = selectedId === m.id ? 3.5 : 2.8;
+      const w = measure(m.text);
+      const near = [[sx + r + 5, sy - 9], [sx - r - 5 - w, sy - 9], [sx - w / 2, sy - r - 22], [sx - w / 2, sy + r + 4]];
+      const far: number[][] = [];
+      for (let d = 26; d <= 110; d += 21) {
+        for (let k = 0; k < 12; k++) {
+          const th = (k / 12) * Math.PI * 2;
+          far.push([sx + Math.cos(th) * d - (Math.cos(th) < -0.2 ? w : Math.cos(th) > 0.2 ? 0 : w / 2), sy + Math.sin(th) * d - 9]);
+        }
       }
+      const spots = [...near, ...far].map(([x, y]) => ({ x, y, w, h: 18 }));
+      const free = (i: number) => {
+        const b = spots[i];
+        return i >= 0 && b.x > 0 && b.x + b.w < camera.w && b.y > 0 && b.y + b.h < camera.h && !boxes.some((o) => intersects(b, o));
+      };
+      const prev = this.prev.get(m.id) ?? -1;
+      const firstNear = near.findIndex((_, i) => free(i));
+      let i = prev < near.length && free(prev) ? prev : firstNear;
+      if (i < 0) i = free(prev) ? prev : spots.findIndex((_, j) => free(j));
+      if (i < 0) i = 0;
+      next.set(m.id, i);
+      const spot = spots[i];
+      boxes.push(spot);
+      const cx = Math.max(spot.x, Math.min(spot.x + spot.w, sx)), cy = Math.max(spot.y, Math.min(spot.y + spot.h, sy));
+      out.push({ word: m, sx, sy, spot, leader: Math.hypot(cx - sx, cy - sy) > r + 10 ? [cx, cy] : null });
     }
-    const free = (b: Box) => b.x > 0 && b.x + b.w < camera.w && b.y > 0 && b.y + b.h < camera.h && !boxes.some((o) => intersects(b, o));
-    const spot = [...near, ...far].map(([x, y]) => ({ x, y, w, h: 18 })).find(free) ?? { x: near[0][0], y: near[0][1], w, h: 18 };
-    boxes.push(spot);
-    const cx = Math.max(spot.x, Math.min(spot.x + spot.w, sx)), cy = Math.max(spot.y, Math.min(spot.y + spot.h, sy));
-    out.push({ word: m, sx, sy, spot, leader: Math.hypot(cx - sx, cy - sy) > r + 10 ? [cx, cy] : null });
+    this.prev = next;
+    return out;
   }
-  return out;
 }
