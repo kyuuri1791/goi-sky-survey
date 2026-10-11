@@ -68,7 +68,7 @@ export function wordResult(id: number): WordResult {
   return { word: info(id), neighbors: neighborsOf(id) };
 }
 
-/** 索引で大まかに絞る候補の数。この中から、1 バイトに丸めたベクトルで近さを計算し直して上位を決める */
+/** インデックスで大まかに絞る候補の数。この中から、1 バイトに丸めたベクトルで近さを計算し直して上位を決める */
 const CANDIDATES = 200;
 
 /** v に使われ方の近い語（複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */

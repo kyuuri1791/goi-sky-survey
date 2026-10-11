@@ -1,4 +1,5 @@
-// 使われ方の近い語を探す索引（IVF-PQ）。pipeline/index.py で作った data/index.bin を使う。複合語の検索で候補を大まかに絞る
+// インデックス（data/index.bin, IVF-PQ）を読み込んでたどり、使われ方の近い語を探す。FAISS の検索の手順をここでなぞる。
+// 複合語の検索で候補を大まかに絞るのに使う
 // （絞った候補の近さは、src/server/words.ts で 1 バイトに丸めたベクトルから計算し直す）。
 //
 // IVF: 語をグループに分けておき、問い合わせに近い nprobe グループの中だけ調べる
@@ -35,7 +36,7 @@ export class IvfPq {
     const buf = fs.readFileSync(indexPath);
     const bytes = buf.byteOffset % 4 === 0 ? buf : Buffer.from(buf);
     const h = new Uint32Array(bytes.buffer, bytes.byteOffset, 8);
-    if (h[0] !== MAGIC) throw new Error("索引の形式が違います");
+    if (h[0] !== MAGIC) throw new Error("インデックスの形式が違います");
     [, this.n, this.dim, this.nlist, this.m, this.ks] = h;
     this.sub = this.dim / this.m;
     let off = bytes.byteOffset + 32;
@@ -50,7 +51,6 @@ export class IvfPq {
     this.order = take((o) => new Uint32Array(bytes.buffer, o, this.n), this.n * 4);
     this.codes = new Uint8Array(bytes.buffer, off, this.n * this.m);
   }
-
 
   /**
    * q に使われ方の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。

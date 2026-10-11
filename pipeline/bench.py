@@ -1,6 +1,6 @@
 """複合語の検索で、全部と比べた本物の上位 10 語をどれだけ当てられるか（再現率）を測る。npm run data:bench から compose 経由で呼ぶ。
 アプリ（src/server/words.ts、src/server/ivfpq.ts）と同じ手順を numpy でなぞる: 分けた語の 1 バイトに丸めたベクトル（data/vectors-*.bin）を足し、
-索引（data/index.bin）で候補を CANDIDATES 件に絞り、そのベクトルで近さを計算し直す。"""
+インデックス（data/index.bin）で候補を CANDIDATES 件に絞り、そのベクトルで近さを計算し直す。"""
 
 import numpy as np
 
@@ -65,7 +65,7 @@ def main():
         hit_pq += len(truth & set(cand[:K]))
         hit += len(truth & set(cand[np.argsort(-(q8[cand] @ q))[:K]]))
     n = K * len(pairs)
-    print(f"索引の見積もりだけ: 本物の上位 {K} 語を当てた割合 {hit_pq / n:.0%}")
+    print(f"インデックスの見積もりだけ: 本物の上位 {K} 語を当てた割合 {hit_pq / n:.0%}")
     print(f"上位 {CANDIDATES} 件を計算し直す（アプリ）: {hit / n:.0%}")
 
 

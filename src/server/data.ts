@@ -111,7 +111,7 @@ export const getNeighbors = once("neighbors", () => {
   };
 });
 
-/** 使われ方の近い語を探す索引（複合語の検索だけで使う）。候補を大まかに絞る */
+/** 使われ方の近い語を探すインデックス（複合語の検索だけで使う）。候補を大まかに絞る */
 export const getIndex = once("index", () => new IvfPq(path.join(DIR, "index.bin")));
 
 export type Vectors = {
@@ -124,7 +124,7 @@ export type Vectors = {
 
 /**
  * 1 バイトに丸めた全部の語のベクトル（data/vectors-*.bin。語ごとに倍率 f32 ＋ i8 × 300）。複合語の検索で、
- * 分けた語のベクトルを足すときと、索引で絞った候補の近さを計算し直すときに使う。
+ * 分けた語のベクトルを足すときと、インデックスで絞った候補の近さを計算し直すときに使う。
  * 120MB ほどあるので、裏で読み込み、最初の要求を待たせない
  */
 export const getVectors = once("vectors", async (): Promise<Vectors> => {

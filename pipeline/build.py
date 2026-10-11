@@ -1,16 +1,16 @@
-"""data/ のファイル（索引と単語の情報）を作る。npm run data:all から compose 経由で呼ぶ。
+"""data/ のファイル（インデックスと単語の情報）を作る。npm run data:all から compose 経由で呼ぶ。
 
   1. chiVe と SudachiDict を取得して読み込む（2 回目からは /work に残したものを使う）
   2. 表示する語を選ぶ（載せない言葉は ng.enc を復号してメモリ上で使う）
   3. 表示用の書き方・品詞・検索用の別名を決める
   4. UMAP で 2 次元に並べる
-  5. IVF-PQ の索引を作る
+  5. IVF-PQ のインデックスを作る
   6. 全部の語の近い語を計算する
   7. /out（= data/）に words.bin、lookup.bin、index.bin、vectors-*.bin、neighbors.bin を書き出す（形式は store.py）
 
   python -m build             全部作る
   python -m build meta        書き方・品詞・別名だけ作り直す（配置は今の data/words.bin のまま）
-  python -m build index       索引と 1 バイトに丸めたベクトルだけ作り直す（配置は変えない）
+  python -m build index       インデックスと 1 バイトに丸めたベクトルだけ作り直す（配置は変えない）
   python -m build neighbors   近い語の表だけ作り直す（配置は変えない）
 """
 
@@ -65,7 +65,7 @@ def main() -> None:
     if sys.argv[1:] == ["index"]:
         index.write(index.build(vecs), *vecs.shape, OUT)
         store.write_vectors(OUT, vecs)
-        log("索引")
+        log("インデックス")
         return
 
     surf, pos, alias = analyze(words)
@@ -84,7 +84,7 @@ def main() -> None:
     ix = index.build(vecs)
     index.write(ix, *vecs.shape, OUT)
     store.write_vectors(OUT, vecs)
-    log("索引")
+    log("インデックス")
 
     neighbors.write(vecs, OUT, log)
     log("近い語")
