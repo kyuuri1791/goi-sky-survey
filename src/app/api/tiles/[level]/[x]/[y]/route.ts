@@ -1,6 +1,6 @@
 import { gzipSync } from "node:zlib";
-import { CDN_CACHE, loadAll } from "@/lib/server-data.ts";
-import { tile } from "@/lib/tiles.ts";
+import { CDN_CACHE, loadAll } from "@/server/data.ts";
+import { tile } from "@/server/tiles.ts";
 
 // 表示のタイル: /api/tiles/2/1/3 → 段 2 のタイル (1, 3) に入る点 [[x, y, id, 品詞, 表示], ...]
 export async function GET(request: Request, ctx: RouteContext<"/api/tiles/[level]/[x]/[y]">) {

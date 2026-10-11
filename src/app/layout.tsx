@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "./styles/globals.css";
 
 const DESCRIPTION = "日本語の約 39 万語を、使われ方の近さで平面に並べました。言葉を探したり、使われ方の近い言葉をたどったりできます。";
 

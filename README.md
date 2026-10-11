@@ -22,7 +22,7 @@
   - 具体的には[UMAP](https://github.com/lmcinnes/umap) で並べている
   - 大体はいい感じに並んでいますが、300次元を無理やり2次元に並べているのでちょいちょい思いっきりズレています...
 
-### 使われ方の近い語の検索（`pipeline/index.py`、`src/lib/ivfpq.ts`）
+### 使われ方の近い語の検索（`pipeline/index.py`、`src/server/ivfpq.ts`）
 
 語彙にある語の近い語はデータを作るときに全部の語と比べて計算しておき、表を引くだけにしています（`pipeline/neighbors.py`）。複合語のように問い合わせのベクトルは無数にありうるものは前もって答えを計算しておけないので、近い語を探すためにIVF-PQ の索引を使っています。索引は [FAISS](https://github.com/facebookresearch/faiss) で作り、アプリが読む形式に書き出しています。
 

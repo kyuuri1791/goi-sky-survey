@@ -28,7 +28,7 @@ from surface import analyze
 from vocab import kept_ids
 
 OUT = Path("/out")
-# 品詞の番号。src/lib/levels.ts の POS_NAMES（動詞、形容詞、副詞など、名詞、固有名詞、その他）の順
+# 品詞の番号。src/app/styles/pos.ts の POS_NAMES（動詞、形容詞、副詞など、名詞、固有名詞、その他）の順
 POS_CLASS = {"動詞": 0, "形容詞": 1, "形状詞": 1, "副詞": 2, "接続詞": 2, "連体詞": 2, "代名詞": 2, "感動詞": 2, "名詞": 3, "固有名詞": 4}
 
 t0 = time.time()
