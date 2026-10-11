@@ -1,6 +1,6 @@
-"""使われ方の近い語を探す索引（IVF-PQ）を FAISS で作り、アプリが読む形式で書き出す（形式は src/lib/ivfpq.ts を参照）。複合語の検索に使う。
+"""使われ方の近い語を探すインデックス(IVF-PQ)を FAISS で作り、アプリが読む形式で書き出す(形式は src/server/ivfpq.ts を参照)。複合語の検索に使う。
 
-  index.bin       IVF-PQ。語を NLIST グループに分け、各語のグループの中心からのずれを M 個の区切りごとに代表の番号（1 バイト）で持つ
+  index.bin       IVF-PQ。語を NLIST グループに分け、各語のグループの中心からのずれを M 個の区切りごとに代表の番号(1 バイト)で持つ
 """
 
 from pathlib import Path
@@ -9,13 +9,13 @@ import faiss
 import numpy as np
 from faiss.contrib.inspect_tools import get_invlist
 
-# M: 1 語の要約のバイト数。複合語の問い合わせで、50 だと本物の上位 9 語の 68%、100 だと 85% を当てる（メモリは約 20MB 増える）
+# M: 1 語の要約のバイト数。複合語の問い合わせで、50 だと本物の上位 9 語の 68%、100 だと 85% を当てる(メモリは約 20MB 増える)
 NLIST, M, KS = 1024, 100, 256
 MAGIC = 0x31515649  # "IVQ1"
 
 
 def build(vecs: np.ndarray):
-    """FAISS の IVF-PQ（ユークリッド距離で学習。検索では内積で見積もる）"""
+    """FAISS の IVF-PQ(ユークリッド距離で学習。検索では内積で見積もる)"""
     n, dim = vecs.shape
     index = faiss.IndexIVFPQ(faiss.IndexFlatL2(dim), dim, NLIST, M, 8)
     index.train(vecs)

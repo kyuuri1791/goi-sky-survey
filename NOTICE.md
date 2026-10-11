@@ -2,7 +2,7 @@
 
 このリポジトリの `data/` にあるファイルは、次のデータをもとに作ったものです。どちらも Apache License, Version 2.0 で提供されています。ライセンスの全文は [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) にあります。
 
-## chiVe v1.3（mc90）
+## chiVe v1.3(mc90)
 
 - 提供元: <https://github.com/WorksApplications/chiVe>
 - Copyright (c) 2024 Works Applications Co., Ltd. All rights reserved.
@@ -10,14 +10,14 @@
 
 使っているファイルと、加えた変更:
 
-- `data/index.bin`: 単語ベクトルを長さ 1 にそろえ、検索用に量子化した索引（IVF-PQ）
-- `data/vectors-0.bin`、`data/vectors-1.bin`: 単語ベクトルを長さ 1 にそろえ、1 バイト（int8）に丸めたもの
+- `data/index.bin`: 単語ベクトルを長さ 1 にそろえ、検索用に量子化した索引(IVF-PQ)
+- `data/vectors-0.bin`、`data/vectors-1.bin`: 単語ベクトルを長さ 1 にそろえ、1 バイト(int8)に丸めたもの
 - `data/neighbors.bin`: 単語ベクトルから計算した、各語の使われ方の近い語
 - `data/words.bin`: 単語の表示用の書き方と、ベクトルを 2 次元に写した位置
 
 単語は、記号や数字だけのもの、ひらがな 1〜2 文字などと、不適切な言葉を除いています。
 
-## SudachiDict（2026-07-23 版の small_lex.csv、core_lex.csv）
+## SudachiDict(2026-07-23 版の small_lex.csv、core_lex.csv)
 
 - 提供元: <https://github.com/WorksApplications/SudachiDict>
 - Copyright (c) 2017-2023 Works Applications Co., Ltd.

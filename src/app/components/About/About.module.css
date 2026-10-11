@@ -1,0 +1,43 @@
+/* 画面全体を暗くして、真ん中に説明の枠を出す */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 3, 8, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.box {
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: #080b16;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px 22px;
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+.title {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.heading {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.text {
+  margin: 0 0 8px;
+}
+.credits {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.actions {
+  margin: 12px 0 8px;
+  text-align: right;
+}
