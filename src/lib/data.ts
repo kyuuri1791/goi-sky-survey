@@ -125,31 +125,29 @@ export type Vectors = {
 /**
  * 1 バイトに丸めた全部の語のベクトル(data/vectors-*.bin。語ごとに倍率 f32 ＋ i8 × 300)。複合語の検索で、
  * 分けた語のベクトルを足すときと、インデックスで絞った候補の近さを計算し直すときに使う。
- * 120MB ほどあるので、裏で読み込み、最初の要求を待たせない
+ * 全部で 120MB ほどあるが、1 回の検索で使うのは数百語ぶんなので、メモリには載せず、使う語の分だけファイルから読む
  */
-export const getVectors = once("vectors", async (): Promise<Vectors> => {
-  const files = (await fs.promises.readdir(DIR)).filter((f) => /^vectors-\d+\.bin$/.test(f)).sort((a, b) => parseInt(a.slice(8)) - parseInt(b.slice(8)));
-  const bufs = await Promise.all(files.map((f) => fs.promises.readFile(path.join(DIR, f))));
+export const getVectors = once("vectors", (): Vectors => {
+  const files = fs.readdirSync(DIR).filter((f) => /^vectors-\d+\.bin$/.test(f)).sort((a, b) => parseInt(a.slice(8)) - parseInt(b.slice(8)));
+  const fds = files.map((f) => fs.openSync(path.join(DIR, f), "r"));
   const dim = getIndex().dim, row = 4 + dim;
-  const perFile = bufs[0].length / row;
-  const views = bufs.map((b) => ({ data: new DataView(b.buffer, b.byteOffset, b.length), i8: new Int8Array(b.buffer, b.byteOffset, b.length) }));
-  const at = (id: number) => {
-    const f = Math.floor(id / perFile);
-    return { ...views[f], o: (id - f * perFile) * row };
+  const perFile = fs.fstatSync(fds[0]).size / row;
+  const read = (id: number) => {
+    const f = Math.floor(id / perFile), b = Buffer.alloc(row);
+    fs.readSync(fds[f], b, 0, row, (id - f * perFile) * row);
+    return { scale: b.readFloatLE(0), i8: new Int8Array(b.buffer, b.byteOffset + 4, dim) };
   };
   return {
     dim,
     vector(id) {
-      const { data, i8, o } = at(id);
-      const s = data.getFloat32(o, true), v = new Float32Array(dim);
-      for (let d = 0; d < dim; d++) v[d] = i8[o + 4 + d] * s;
-      return v;
+      const { scale, i8 } = read(id);
+      return Float32Array.from(i8, (x) => x * scale);
     },
     dot(id, q) {
-      const { data, i8, o } = at(id);
+      const { scale, i8 } = read(id);
       let t = 0;
-      for (let d = 0; d < dim; d++) t += q[d] * i8[o + 4 + d];
-      return t * data.getFloat32(o, true);
+      for (let d = 0; d < dim; d++) t += q[d] * i8[d];
+      return t * scale;
     },
   };
 });
@@ -157,13 +155,12 @@ export const getVectors = once("vectors", async (): Promise<Vectors> => {
 /**
  * データを全部読み込む(2 回目からは何もしない)。どの API でも最初に呼ぶ。
  * デプロイ先は、要求が重なるとサーバーを何台も立ち上げて振り分ける。どのサーバーでも最初の検索が待たされないよう、
- * 最初の要求で全部読んでおく(ベクトルだけは大きいので、裏で読み始める)
+ * 最初の要求で全部読んでおく
  */
 export function loadAll() {
   getHiddenIds();
   getLookup();
   getNeighbors();
   getIndex();
-  // 読めなかったら、次に呼ばれたときに読み直す
-  getVectors().catch(() => cache.delete("vectors"));
+  getVectors();
 }

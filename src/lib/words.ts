@@ -42,8 +42,8 @@ export function resolve(text: string): number[] | null {
 }
 
 /** 語の番号の列のベクトルを足し合わせる */
-export async function combine(ids: number[]): Promise<Float32Array> {
-  const vectors = await getVectors();
+export function combine(ids: number[]): Float32Array {
+  const vectors = getVectors();
   const v = new Float32Array(vectors.dim);
   for (const id of ids) {
     const w = vectors.vector(id);
@@ -72,9 +72,9 @@ export function wordResult(id: number): WordResult {
 const CANDIDATES = 200;
 
 /** v に使われ方の近い語(複合語のように表にない問い合わせに使う)。隠す語と exclude は除く */
-export async function nearest(v: Float32Array, k: number, exclude: number[] = []): Promise<Word[]> {
+export function nearest(v: Float32Array, k: number, exclude: number[] = []): Word[] {
   const ex = new Set([...getHiddenIds(), ...exclude]);
-  const vectors = await getVectors();
+  const vectors = getVectors();
   let qn = 0;
   for (const x of v) qn += x * x;
   qn = Math.sqrt(qn) || 1;

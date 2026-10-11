@@ -10,6 +10,6 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/word/[w]">)
   if (!ids) return Response.json({ error: `「${w}」は見つかりませんでした` }, { status: 404 });
   if (ids.length === 1) return Response.json(wordResult(ids[0]), { headers: CDN_CACHE });
   // 一番近い語をその語として扱い、残りの 8 語を近い語にする
-  const [word, ...neighbors] = await nearest(await combine(ids), 9, ids);
+  const [word, ...neighbors] = nearest(combine(ids), 9, ids);
   return Response.json({ composite: ids.map((id) => info(id)), word, neighbors }, { headers: CDN_CACHE });
 }
