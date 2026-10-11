@@ -1,0 +1,17 @@
+:root {
+  --fg: #dfe6f3;
+  --muted: #7f8aa3;
+  --accent: #ffd27a;
+  --line: #1e2742;
+  --panel: rgba(8, 11, 22, 0.86);
+  --mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #03050b;
+  color: var(--fg);
+  overflow: hidden;
+  font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
