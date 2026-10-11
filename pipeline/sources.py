@@ -1,4 +1,4 @@
-"""元データ（chiVe と SudachiDict）の取得と読み込み。取得したものと読み込んだ結果は /work（名前付きボリューム）に残し、次からは使い回す。"""
+"""元データ(chiVe と SudachiDict)の取得と読み込み。取得したものと読み込んだ結果は /work(名前付きボリューム)に残し、次からは使い回す。"""
 
 import io
 import json
@@ -12,7 +12,7 @@ import numpy as np
 WORK = Path("/work")
 CHIVE_URL = "https://sudachi.s3-ap-northeast-1.amazonaws.com/chive/chive-1.3-mc90.tar.gz"
 SUDACHI_URL = "https://sudachi.s3-ap-northeast-1.amazonaws.com/sudachidict-raw/20260723/{}.zip"
-SUDACHI_FILES = ["small_lex", "core_lex"]  # small_lex（よく使われる語）を先に読む
+SUDACHI_FILES = ["small_lex", "core_lex"]  # small_lex(よく使われる語)を先に読む
 
 
 def _download(url: str, path: Path) -> Path:
@@ -25,7 +25,7 @@ def _download(url: str, path: Path) -> Path:
 
 
 def chive() -> tuple[list[str], np.ndarray]:
-    """chiVe の単語（よく使われる順）と、長さ 1 にそろえたベクトル（単語数 × 300）"""
+    """chiVe の単語(よく使われる順)と、長さ 1 にそろえたベクトル(単語数 × 300)"""
     words_path, vecs_path = WORK / "chive-words.json", WORK / "chive-vectors.npy"
     if not vecs_path.exists():
         archive = _download(CHIVE_URL, WORK / "chive-1.3-mc90.tar.gz")

@@ -1,11 +1,11 @@
-"""載せない言葉の一覧（ng.enc）の暗号化と復号。
+"""載せない言葉の一覧(ng.enc)の暗号化と復号。
 
-一覧の中身は公開しないので、git には暗号化した ng.enc だけを入れる。鍵は環境変数 NG_KEY（compose が pipeline/.env から渡す）。
-復号した一覧はディスクに書かず、メモリ上で使う（編集するときだけ /tmp の tmpfs に置く）。
+一覧の中身は公開しないので、git には暗号化した ng.enc だけを入れる。鍵は環境変数 NG_KEY(compose が pipeline/.env から渡す)。
+復号した一覧はディスクに書かず、メモリ上で使う(編集するときだけ /tmp の tmpfs に置く)。
 
   python -m ngcrypt edit   ng.enc を復号してエディタで開き、保存したら暗号化し直す
 
-形式: "NGE2"（4 バイト）、scrypt のソルト（16）、IV（12）、認証タグ（16）、暗号文（一覧を gzip したもの）。暗号は AES-256-GCM。
+形式: "NGE2"(4 バイト)、scrypt のソルト(16)、IV(12)、認証タグ(16)、暗号文(一覧を gzip したもの)。暗号は AES-256-GCM。
 鍵をなくすと復号できないので、パスワード管理ソフトなど別の場所にも控えておくこと。
 """
 
@@ -36,7 +36,7 @@ def decrypt() -> str:
     try:
         plain = AESGCM(_key(salt)).decrypt(iv, body + tag, None)
     except Exception:
-        sys.exit("復号できませんでした（鍵が違うか、ファイルが壊れています）")
+        sys.exit("復号できませんでした(鍵が違うか、ファイルが壊れています)")
     return gzip.decompress(plain).decode()
 
 
@@ -48,7 +48,7 @@ def encrypt(text: str) -> None:
 
 
 def words() -> set[str]:
-    """一覧の語（# で始まる行と空行を除く）"""
+    """一覧の語(# で始まる行と空行を除く)"""
     return {s.strip() for s in decrypt().splitlines() if s.strip() and not s.startswith("#")}
 
 

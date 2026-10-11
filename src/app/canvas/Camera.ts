@@ -7,19 +7,19 @@ import { MARK_FONT_SIZE } from "./style.ts";
 export type View = { x: number; y: number; s: number };
 
 export class Camera implements View {
-  /** 画面の幅と高さ（CSS の px） */
+  /** 画面の幅と高さ(CSS の px) */
   w = 0;
   h = 0;
   x = 0;
   y = 0;
   s = 1;
-  /** 飛んでいる途中のアニメーション（時刻を渡すと、その時刻の位置へ進める）。null なら止まっている */
+  /** 飛んでいる途中のアニメーション(時刻を渡すと、その時刻の位置へ進める)。null なら止まっている */
   private flight: ((now: number) => void) | null = null;
 
-  /** home: 最初に見せる範囲（よく使われる語が集まっている所） */
+  /** home: 最初に見せる範囲(よく使われる語が集まっている所) */
   constructor(readonly home: HomeView) {}
 
-  /** 拡大率 1 = 最初に見せる範囲（home）が画面に収まる大きさ。縦横それぞれ合わせて、小さい方にする */
+  /** 拡大率 1 = 最初に見せる範囲(home)が画面に収まる大きさ。縦横それぞれ合わせて、小さい方にする */
   fitScale() {
     return Math.min((this.w * 0.46) / this.home.rx, (this.h * 0.46) / this.home.ry);
   }
@@ -28,7 +28,7 @@ export class Camera implements View {
     return this.s / this.fitScale();
   }
 
-  /** 最初の範囲を見る視点（全体の表示） */
+  /** 最初の範囲を見る視点(全体の表示) */
   homeView(): View {
     return { x: this.home.x, y: this.home.y, s: this.fitScale() };
   }
@@ -45,7 +45,7 @@ export class Camera implements View {
     return [this.x + (sx - this.w / 2) / this.s, this.y + (sy - this.h / 2) / this.s];
   }
 
-  /** 画面の座標が、画面の中か（点の大きさの分、少し外まで含める） */
+  /** 画面の座標が、画面の中か(点の大きさの分、少し外まで含める) */
   isOnScreen(sx: number, sy: number) {
     return sx >= -20 && sy >= -20 && sx <= this.w + 20 && sy <= this.h + 20;
   }
@@ -56,9 +56,9 @@ export class Camera implements View {
   }
 
   /**
-   * 語を選んだときに見せる、画面のうち隠れていない範囲（中心と幅・高さ）。
-   * PC では右のパネル（300px ほど）、左下の凡例の列（220px ほど）、下の検索欄（80px ほど）を、
-   * スマホ（幅 640px 以下）では下の 4 割ほどのパネルを除く。withPanel が false なら（パネルを出さないとき）、パネルの分は除かない
+   * 語を選んだときに見せる、画面のうち隠れていない範囲(中心と幅・高さ)。
+   * PC では右のパネル(300px ほど)、左下の凡例の列(220px ほど)、下の検索欄(80px ほど)を、
+   * スマホ(幅 640px 以下)では下の 4 割ほどのパネルを除く。withPanel が false なら(パネルを出さないとき)、パネルの分は除かない
    */
   freeArea(withPanel = true) {
     const { w: W, h: H } = this;
@@ -72,14 +72,14 @@ export class Camera implements View {
 
   /**
    * 語 w と近い語が、名前まで全部、隠れていない範囲に収まる視点。
-   * 1. w を範囲の真ん中に置いたまま全部が収まる拡大率にする（全体の表示＝1 倍より引かない）
-   * 2. その拡大率でもはみ出す語があれば、収まるところまで視点をずらす（w はそのときだけ真ん中からずれる）
+   * 1. w を範囲の真ん中に置いたまま全部が収まる拡大率にする(全体の表示＝1 倍より引かない)
+   * 2. その拡大率でもはみ出す語があれば、収まるところまで視点をずらす(w はそのときだけ真ん中からずれる)
    * 名前は点の右に出るので、名前の幅も入るようにする
    */
   focusView(w: Word, near: Word[], withPanel = true): View {
     const area = this.freeArea(withPanel), pad = 24;
     const L = area.cx - area.w / 2 + pad, R = area.cx + area.w / 2 - pad, T = area.cy - area.h / 2 + pad, B = area.cy + area.h / 2 - pad;
-    // 名前の幅の見積もり（全角はほぼ 1 文字ぶんの幅）
+    // 名前の幅の見積もり(全角はほぼ 1 文字ぶんの幅)
     const label = (p: Word) => p.text.length * MARK_FONT_SIZE + 12;
     let s = this.fitScale() * 400;
     for (const n of near) {
@@ -103,7 +103,7 @@ export class Camera implements View {
     return { x: cx + (this.w / 2 - area.cx) / s, y: cy + (this.h / 2 - area.cy) / s, s };
   }
 
-  /** 視点 to へ ms かけて飛ぶ（遠くへは、いったん引いてから寄る） */
+  /** 視点 to へ ms かけて飛ぶ(遠くへは、いったん引いてから寄る) */
   flyTo(to: View, ms = 1400) {
     const from = { x: this.x, y: this.y, s: this.s };
     const t0 = performance.now();
@@ -118,7 +118,7 @@ export class Camera implements View {
     };
   }
 
-  /** 飛んでいる途中なら止める（指やホイールで動かし始めたとき） */
+  /** 飛んでいる途中なら止める(指やホイールで動かし始めたとき) */
   stop() {
     this.flight = null;
   }

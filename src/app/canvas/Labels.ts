@@ -1,4 +1,4 @@
-// 語の名前を置く場所と濃さを決める（描くのは Renderer）
+// 語の名前を置く場所と濃さを決める(描くのは Renderer)
 import type { Rgb } from "@/app/styles/pos.ts";
 import type { Word } from "@/shared/types.ts";
 import type { Camera } from "./Camera.ts";
@@ -8,29 +8,29 @@ export const intersects = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w
 
 /** 名前の候補。x, y は名前の左端と縦の中央、a はいちばん濃いときの濃さ */
 export type LabelCand = { id: number; text: string; x: number; y: number; size: number; color: Rgb; a: number };
-/** 描く名前。alpha は出し入れの途中の濃さ（0〜1）、show は出ているか（消えかけなら false） */
+/** 描く名前。alpha は出し入れの途中の濃さ(0〜1)、show は出ているか(消えかけなら false) */
 export type PlacedLabel = { cand: LabelCand; box: Box; width: number; alpha: number; show: boolean };
 
 /**
  * ほかの語の名前。すでに置いた名前と重ならないものだけ出す。
  * 画面のマス目で決めると、動かすたびに境目が変わって密集した所で名前が入れ替わり、点滅して見えるので、名前どうしの重なりで決める。
- * いま出ている名前（消えかけのものも含む）を先に置いて場所を確保し、そのあとによく使われる語から順に置く
- * （新しい名前が、消えかけの名前の上に重なって現れないように）。出すときは 0.25 秒、消すときは 0.12 秒ほどかけて、なめらかに濃さを変える
+ * いま出ている名前(消えかけのものも含む)を先に置いて場所を確保し、そのあとによく使われる語から順に置く
+ * (新しい名前が、消えかけの名前の上に重なって現れないように)。出すときは 0.25 秒、消すときは 0.12 秒ほどかけて、なめらかに濃さを変える
  */
 export class Labels {
-  /** 語の名前の濃さ（0〜1）。出す・消すときは少しずつ変えて、密集した所で名前が点滅して見えないようにする */
+  /** 語の名前の濃さ(0〜1)。出す・消すときは少しずつ変えて、密集した所で名前が点滅して見えないようにする */
   private alpha = new Map<number, number>();
-  /** 語の名前の幅（語ごとに文字の大きさが決まっているので、一度測ったら使い回す） */
+  /** 語の名前の幅(語ごとに文字の大きさが決まっているので、一度測ったら使い回す) */
   private widths = new Map<number, number>();
   private lastFrame = 0;
 
-  /** 名前の候補に濃さが残っているか（消えかけの名前も、候補に入れ続ける） */
+  /** 名前の候補に濃さが残っているか(消えかけの名前も、候補に入れ続ける) */
   isFading(id: number) {
     return this.alpha.has(id);
   }
 
   /**
-   * 時刻 t のフレームで描く名前を決める。labelMax より番号の小さい語だけを出し、reserved（選んだ語の周り）には置かない。
+   * 時刻 t のフレームで描く名前を決める。labelMax より番号の小さい語だけを出し、reserved(選んだ語の周り)には置かない。
    * measure: 名前の幅を測る
    */
   layout(cands: LabelCand[], labelMax: number, t: number, reserved: Box[], measure: (c: LabelCand) => number): PlacedLabel[] {
@@ -48,7 +48,7 @@ export class Labels {
       const box = { x: c.x - 2, y: c.y - c.size * 0.7, w: width + 4, h: c.size * 1.4 };
       const free = !grid.overlaps(box);
       const show = c.id < labelMax && free;
-      // 消すときは出すときの倍の速さにする（動かして名前どうしがぶつかったとき、重なって見える時間を短くする）
+      // 消すときは出すときの倍の速さにする(動かして名前どうしがぶつかったとき、重なって見える時間を短くする)
       const alpha = Math.max(0, Math.min(1, (this.alpha.get(c.id) ?? 0) + (show ? step : -2 * step)));
       if (alpha <= 0) {
         this.alpha.delete(c.id);
@@ -95,7 +95,7 @@ export type MarkLabel = { word: Word; sx: number; sy: number; spot: Box; leader:
 
 /**
  * 選んだ語と近い語の名前を、点の周りの重ならない所に置く。
- * まず点のすぐ隣（右・左・上・下）を試し、空いていなければ点から少しずつ離して探す。measure: 名前の幅を測る
+ * まず点のすぐ隣(右・左・上・下)を試し、空いていなければ点から少しずつ離して探す。measure: 名前の幅を測る
  */
 export function placeMarkLabels(marks: Word[], selectedId: number | undefined, camera: Camera, measure: (text: string) => number): MarkLabel[] {
   const boxes: Box[] = [];

@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // ロリポップ！デプロイナウでは standalone 出力が必須
   output: "standalone",
-  // 開発中に左下に出る Next.js のマークは、凡例と重なるので出さない（エラーは引き続き表示される）
+  // 開発中に左下に出る Next.js のマークは、凡例と重なるので出さない(エラーは引き続き表示される)
   devIndicators: false,
   // 検索の索引と単語の情報は実行時に fs で読むので同梱する
   outputFileTracingIncludes: {

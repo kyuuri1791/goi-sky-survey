@@ -1,6 +1,6 @@
 "use client";
 
-// 画面全体: 地図（canvas）と、タイトル・パネル・凡例・検索欄。
+// 画面全体: 地図(canvas)と、タイトル・パネル・凡例・検索欄。
 // 地図は src/app/canvas/SkyMap.ts が描き、ここは語を引いてパネルに出したり、地図に飛ぶよう頼んだりする
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { SkyMap } from "@/app/canvas/SkyMap.ts";
@@ -13,10 +13,10 @@ import type { TilePoint, WordResult } from "@/shared/types.ts";
 import styles from "./App.module.css";
 import { CURATED_WORDS } from "./curated.ts";
 
-/** 語を引く API（src/app/api）の答え。見つからなかったときや、読めなかったときは error に理由が入る */
+/** 語を引く API(src/app/api)の答え。見つからなかったときや、読めなかったときは error に理由が入る */
 type Lookup = WordResult | { error: string };
 
-/** 語を引く。path は /api/word/語（検索。語彙にない複合語も引ける）か /api/neighbors/番号（星や近い語を押したとき） */
+/** 語を引く。path は /api/word/語(検索。語彙にない複合語も引ける)か /api/neighbors/番号(星や近い語を押したとき) */
 const fetchWord = async (path: string): Promise<Lookup> => {
   try {
     return await (await fetch(path)).json();
@@ -34,11 +34,11 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
   const [panel, setPanel] = useState<PanelData | null>(null);
   const [msg, setMsg] = useState("");
   const [about, setAbout] = useState(false);
-  /** 最初の範囲から外れているか（「全体を表示」ボタンを出すか） */
+  /** 最初の範囲から外れているか(「全体を表示」ボタンを出すか) */
   const [away, setAway] = useState(false);
 
   /**
-   * 引いた語を、地図でその語へ飛び、パネルに出す。n は頼んだときの番号、query は共有する URL に入れる文字（省くと語そのもの）。
+   * 引いた語を、地図でその語へ飛び、パネルに出す。n は頼んだときの番号、query は共有する URL に入れる文字(省くと語そのもの)。
    * 見つからなければ理由を出して false を返す
    */
   const show = (n: number, d: Lookup, query?: string) => {
@@ -54,7 +54,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
     return show(n, await request, query);
   };
 
-  /** 選んでいる語をやめる。home なら全体の表示に戻る（目印は薄くして消す）。そうでなければ目印をすぐ消す */
+  /** 選んでいる語をやめる。home なら全体の表示に戻る(目印は薄くして消す)。そうでなければ目印をすぐ消す */
   const close = (home: boolean) => {
     latest.current++;
     if (home) mapRef.current?.goHome();
@@ -63,11 +63,11 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
   };
 
   const search = async (text: string) => {
-    // 見つかったら入力欄から抜ける（Esc で全体に戻れるように。スマホではキーボードも閉じる）。見つからなければ打ち直せるよう残す
+    // 見つかったら入力欄から抜ける(Esc で全体に戻れるように。スマホではキーボードも閉じる)。見つからなければ打ち直せるよう残す
     if (await open(fetchWord(`/api/word/${encodeURIComponent(text)}`), text)) inputRef.current?.blur();
   };
 
-  /** 一覧（src/app/components/App/curated.ts）からランダムに選んだ面白い語へ飛ぶ。今見ている語は選ばない */
+  /** 一覧(src/app/components/App/curated.ts)からランダムに選んだ面白い語へ飛ぶ。今見ている語は選ばない */
   const surprise = () => {
     const pool = CURATED_WORDS.filter((w) => w !== panel?.query);
     void search(pool[Math.floor(Math.random() * pool.length)]);
@@ -78,7 +78,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
   useEffect(() => {
     const map = new SkyMap(canvasRef.current!, home, baseTile, { onTap: (id) => onTap(id), onAwayChange: setAway });
     mapRef.current = map;
-    // 共有された URL（/?w=語）から開いたときは、冒頭の演出をせず、全体からその語へ飛ぶ
+    // 共有された URL(/?w=語)から開いたときは、冒頭の演出をせず、全体からその語へ飛ぶ
     const shared = new URLSearchParams(location.search).get("w");
     if (shared) {
       map.showHome();
@@ -86,7 +86,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
       void fetchWord(`/api/word/${encodeURIComponent(shared)}`).then((d) => showShared(n, d, shared));
     } else {
       // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
-      // （「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる）
+      // (「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる)
       map.playIntro(intro.word, intro.neighbors);
     }
     return () => {
@@ -95,7 +95,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
     };
   }, [home, intro, baseTile]);
 
-  // Esc か Home キーでも全体に戻る（検索欄に入力しているときは除く）
+  // Esc か Home キーでも全体に戻る(検索欄に入力しているときは除く)
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     if ((e.key === "Escape" || e.key === "Home") && !(e.target instanceof HTMLInputElement)) close(true);
   });
@@ -105,7 +105,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
     return () => removeEventListener("keydown", listener);
   }, []);
 
-  // 選んでいる語を URL に入れておく（/?w=語）。そのままアドレスを送れば、相手も同じ語から見られる
+  // 選んでいる語を URL に入れておく(/?w=語)。そのままアドレスを送れば、相手も同じ語から見られる
   useEffect(() => {
     const url = new URL(location.href);
     if (panel) url.searchParams.set("w", panel.query);

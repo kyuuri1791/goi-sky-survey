@@ -9,7 +9,7 @@ const g = globalThis as { __goiTiles?: Map<string, number[]> };
 const key = (level: number, tx: number, ty: number) => `${level}/${tx}/${ty}`;
 
 /**
- * 段・タイルごとに、そこに入る語の番号を分けておく（空間のインデックス）。最初に呼ばれたときに作って、以後は使い回す。
+ * 段・タイルごとに、そこに入る語の番号を分けておく(空間のインデックス)。最初に呼ばれたときに作って、以後は使い回す。
  * 番号の小さい順に入れるので、タイルの中もよく使われる順に並ぶ
  */
 function buckets(): Map<string, number[]> {

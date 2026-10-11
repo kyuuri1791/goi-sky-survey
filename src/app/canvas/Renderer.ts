@@ -32,7 +32,7 @@ export class Renderer {
     this.hitDots = [];
     this.hitLabels = [];
     const z = this.camera.zoom();
-    // 名前を出す語の数（よく使われる順）。全体を見ているとき（拡大率 1）は出さず、拡大するにつれて増やす。
+    // 名前を出す語の数(よく使われる順)。全体を見ているとき(拡大率 1)は出さず、拡大するにつれて増やす。
     // 窓の大きさを変えると拡大率が 1 から少しずれるので、1.3 倍ほどまでは出さない
     const frame: Frame = { t, z, vis: visibleCount(z), labelMax: 40 * Math.max(0, z ** 1.7 - 1.5), labelCands: [] };
     const marks = selection.marks;
@@ -51,9 +51,9 @@ export class Renderer {
     });
     this.drawLabels(frame, reserved);
     ctx.globalAlpha = fade;
-    // 線（星と名前のあとに描いて、埋もれないようにする）
+    // 線(星と名前のあとに描いて、埋もれないようにする)
     if (selection.word) this.drawLines(selection.word, selection.neighbors);
-    // 選んだ語と近い語の点を描いてから、名前を描く（名前が点に隠れないように）
+    // 選んだ語と近い語の点を描いてから、名前を描く(名前が点に隠れないように)
     for (const m of marks) this.drawStar(frame, m, true);
     this.drawMarkLabels(selection);
     if (selection.word) this.drawRing(selection.word);
@@ -61,11 +61,11 @@ export class Renderer {
   }
 
   /**
-   * 画面の (x, y) を押したときに選ぶ語。押した所に名前があればその語、なければ 20px 以内の点の語（どちらも直前に描いたもの）。
+   * 画面の (x, y) を押したときに選ぶ語。押した所に名前があればその語、なければ 20px 以内の点の語(どちらも直前に描いたもの)。
    * 点は、ほとんど見えない薄い点が近くにあっても見えている点が選ばれるよう、距離を明るさで割って比べる。どちらもなければ null
    */
   hitTest(x: number, y: number) {
-    // 後から描いた（上に重なっている）名前を優先する
+    // 後から描いた(上に重なっている)名前を優先する
     const label = this.hitLabels.findLast((b) => x >= b.x - 2 && x <= b.x + b.w + 2 && y >= b.y && y <= b.y + b.h);
     if (label) return label.id;
     let best: number | null = null, bd = Infinity;
@@ -90,7 +90,7 @@ export class Renderer {
     ctx.fillRect(0, 0, W, H);
   }
 
-  /** 点を 1 つ描く。hi: 選んだ語と近い語（必ず描き、名前はここでは出さない） */
+  /** 点を 1 つ描く。hi: 選んだ語と近い語(必ず描き、名前はここでは出さない) */
   private drawStar(frame: Frame, p: Star, hi: boolean) {
     const { ctx } = this, { t, z, vis, labelMax } = frame, { id } = p;
     const [sx, sy] = this.camera.toScreen(p.x, p.y);
@@ -116,7 +116,7 @@ export class Renderer {
     ctx.fill();
     this.hitDots.push({ x: sx, y: sy, a, id });
     if (!hi && (id < labelMax || this.labels.isFading(id))) {
-      // 名前の濃さには、星のまたたき（tw）を入れない（名前がちらつかないように）
+      // 名前の濃さには、星のまたたき(tw)を入れない(名前がちらつかないように)
       frame.labelCands.push({ id, text: p.text, x: sx + r + 4, y: sy, size: Math.max(10, 14 - mag * 1.2), color: [cr, cg, cb], a: Math.min(1, a / tw + 0.15) * appear });
     }
   }
@@ -170,7 +170,7 @@ export class Renderer {
       }
       ctx.fillStyle = "rgba(3,5,11,0.65)";
       ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
-      // 名前は、点と同じ品詞の色にする（凡例・パネルとそろえる）
+      // 名前は、点と同じ品詞の色にする(凡例・パネルとそろえる)
       ctx.fillStyle = posColor(word.pos);
       ctx.textBaseline = "top";
       ctx.fillText(word.text, spot.x, spot.y + 1);

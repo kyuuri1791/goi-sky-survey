@@ -1,16 +1,16 @@
-# データを作る環境。npm run data:all などから呼ぶ（package.json を参照）
+# データを作る環境。npm run data:all などから呼ぶ(package.json を参照)
 name: goi-sky-survey
 services:
   pipeline:
     build: .
     image: goi-pipeline
-    # 鍵（NG_KEY）は pipeline/.env から環境変数で渡す（ルートの .env だと Next.js がビルド結果にコピーしてしまうので置かない）
+    # 鍵(NG_KEY)は pipeline/.env から環境変数で渡す(ルートの .env だと Next.js がビルド結果にコピーしてしまうので置かない)
     env_file: .env
     volumes:
       - .:/app # コードと ng.enc
       - ../data:/out # 書き出し先
-      - work:/work # 元データと途中結果（手元のディレクトリを汚さない）
-    # 復号した除外語の一覧はここ（メモリ上）にだけ置く
+      - work:/work # 元データと途中結果(手元のディレクトリを汚さない)
+    # 復号した除外語の一覧はここ(メモリ上)にだけ置く
     tmpfs:
       - /tmp
 volumes:

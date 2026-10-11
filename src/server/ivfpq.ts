@@ -1,16 +1,16 @@
-// インデックス（data/index.bin, IVF-PQ）を読み込んでたどり、使われ方の近い語を探す。FAISS の検索の手順をここでなぞる。
+// インデックス(data/index.bin, IVF-PQ)を読み込んでたどり、使われ方の近い語を探す。FAISS の検索の手順をここでなぞる。
 // 複合語の検索で候補を大まかに絞るのに使う
-// （絞った候補の近さは、src/server/words.ts で 1 バイトに丸めたベクトルから計算し直す）。
+// (絞った候補の近さは、src/server/words.ts で 1 バイトに丸めたベクトルから計算し直す)。
 //
 // IVF: 語をグループに分けておき、問い合わせに近い nprobe グループの中だけ調べる
-// PQ:  各語のベクトル（グループの中心からのずれ）を区切りごとの代表の番号（1 バイト × M）で持ち、
+// PQ:  各語のベクトル(グループの中心からのずれ)を区切りごとの代表の番号(1 バイト × M)で持ち、
 //      類似度を「区切りごとの表を引いて足すだけ」で見積もる
 //
-// index.bin の形式（リトルエンディアン）:
+// index.bin の形式(リトルエンディアン):
 //   u32 × 8   マジック "IVQ1"、語数 n、次元 DIM、グループ数 NLIST、区切り数 M、代表の数 KS、予約 × 2
 //   f32[NLIST × DIM]        グループの中心
 //   f32[M × KS × DIM/M]     区切りごとの代表
-//   u32[NLIST + 1]          グループごとの始まり（order の位置）
+//   u32[NLIST + 1]          グループごとの始まり(order の位置)
 //   u32[n]                  グループ順に並べた語の番号
 //   u8[n × M]               order の順の PQ の番号
 import fs from "node:fs";
@@ -53,7 +53,7 @@ export class IvfPq {
   }
 
   /**
-   * q に使われ方の近い上位 k 語（PQ の見積もりで決める）。exclude の語は除く。nprobe: 調べるグループの数。
+   * q に使われ方の近い上位 k 語(PQ の見積もりで決める)。exclude の語は除く。nprobe: 調べるグループの数。
    * score は q との cos 類似度の見積もり
    */
   search(q: Float32Array, k: number, exclude: Set<number> = new Set(), nprobe = 64): Hit[] {
@@ -79,7 +79,7 @@ export class IvfPq {
         lut[mm * ks + c] = s;
       }
     }
-    // 3. 見積もりで上位 k 語を集める（小さい方から捨てる）
+    // 3. 見積もりで上位 k 語を集める(小さい方から捨てる)
     const top: Hit[] = [];
     let worst = -Infinity;
     for (const c of lists) {

@@ -1,6 +1,6 @@
 // 単語を使われ方の近さで並べた平面を、canvas に暗い背景に光る点として描く地図。App から使うのはこのクラスだけ。
-// 視点（Camera）・点（StarField）・選んだ語（Selection）・描画（Renderer）・操作（Input）を持ち、毎フレームのループを回す。
-// タップした語は onTap で知らせる（語を引いてパネルに出すのは呼んだ側）
+// 視点(Camera)・点(StarField)・選んだ語(Selection)・描画(Renderer)・操作(Input)を持ち、毎フレームのループを回す。
+// タップした語は onTap で知らせる(語を引いてパネルに出すのは呼んだ側)
 import type { HomeView } from "@/shared/levels.ts";
 import type { TilePoint, Word } from "@/shared/types.ts";
 import { Camera } from "./Camera.ts";
@@ -10,9 +10,9 @@ import { Selection } from "./Selection.ts";
 import { StarField } from "./StarField.ts";
 
 type Events = {
-  /** 語をタップしたとき（何もない所なら null） */
+  /** 語をタップしたとき(何もない所なら null) */
   onTap: (id: number | null) => void;
-  /** 最初の範囲から外れたか、戻ったか（「全体を表示」ボタンを出すか） */
+  /** 最初の範囲から外れたか、戻ったか(「全体を表示」ボタンを出すか) */
   onAwayChange: (away: boolean) => void;
 };
 
@@ -36,7 +36,7 @@ export class SkyMap {
   /** 最後にタイルを読むか調べた時刻 */
   private lastTiles = 0;
 
-  /** home: 最初に見せる範囲、baseTile: 全体の星（段 0 のタイル） */
+  /** home: 最初に見せる範囲、baseTile: 全体の星(段 0 のタイル) */
   constructor(
     private canvas: HTMLCanvasElement,
     home: HomeView,
@@ -78,7 +78,7 @@ export class SkyMap {
     this.selection.clear();
   }
 
-  /** 最初の範囲（全体の表示）に戻る。目印は薄くして消す */
+  /** 最初の範囲(全体の表示)に戻る。目印は薄くして消す */
   goHome() {
     this.camera.flyTo(this.camera.homeView(), 1200);
     this.selection.fadeOut();
@@ -86,14 +86,14 @@ export class SkyMap {
 
   /** 冒頭の演出: 語 w の近くから始めて、ゆっくり引いて全体を見せる */
   playIntro(w: Word, neighbors: Word[]) {
-    // 検索で語に飛んだときと同じく、近い語が名前まで画面に収まる視点から始める（最初はパネルを出さないので、パネルの分は空けない）
+    // 検索で語に飛んだときと同じく、近い語が名前まで画面に収まる視点から始める(最初はパネルを出さないので、パネルの分は空けない)
     this.camera.set(this.camera.focusView(w, neighbors, false));
     this.select(w, neighbors, false);
     this.timers.push(
       setTimeout(() => {
         this.camera.flyTo(this.camera.homeView(), 3000);
         this.timers.push(setTimeout(() => (this.introDone = true), 3000));
-        // 引き始めたら目印は薄くして消す（そのあいだに別の語を選んでいたら、そちらは残す）
+        // 引き始めたら目印は薄くして消す(そのあいだに別の語を選んでいたら、そちらは残す)
         if (this.selection.word?.id === w.id) this.selection.fadeOut();
       }, 900),
     );
@@ -133,8 +133,8 @@ export class SkyMap {
   };
 
   /**
-   * 視点を動かす。画面の真ん中の点が MIN_STARS より少ないときは、点が増える向きか、語の集まりの中心（home）に近づく向きにしか動かさない
-   * （何もない所へいくらでも行けてしまわないように）。戻る向きにはいつでも動かせるので、急に引き戻すことはない
+   * 視点を動かす。画面の真ん中の点が MIN_STARS より少ないときは、点が増える向きか、語の集まりの中心(home)に近づく向きにしか動かさない
+   * (何もない所へいくらでも行けてしまわないように)。戻る向きにはいつでも動かせるので、急に引き戻すことはない
    */
   private moveLimited(change: () => void) {
     const { camera } = this, { home } = camera;

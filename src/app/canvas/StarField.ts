@@ -1,4 +1,4 @@
-// 地図の点。全体の星（段 0 のタイル）から始めて、見えている範囲と拡大率に要るタイル（/api/tiles）を読み足していく
+// 地図の点。全体の星(段 0 のタイル)から始めて、見えている範囲と拡大率に要るタイル(/api/tiles)を読み足していく
 import { MAX_LEVEL, tileIndex, visibleCount } from "@/shared/levels.ts";
 import type { TilePoint } from "@/shared/types.ts";
 import type { Camera } from "./Camera.ts";
@@ -6,7 +6,7 @@ import type { Camera } from "./Camera.ts";
 export type Star = { x: number; y: number; id: number; pos: number; text: string };
 
 export class StarField {
-  /** 読み込んだ点（よく使われる順＝id の小さい順に並べておく） */
+  /** 読み込んだ点(よく使われる順＝id の小さい順に並べておく) */
   readonly stars: Star[] = [];
   private loaded = new Set<string>();
 
@@ -28,7 +28,7 @@ export class StarField {
     }
   }
 
-  /** 画面の真ん中（縦横それぞれ中央の半分）に描いている点の数（max まで数えたら打ち切る） */
+  /** 画面の真ん中(縦横それぞれ中央の半分)に描いている点の数(max まで数えたら打ち切る) */
   countInCenter(camera: Camera, max: number) {
     const vis = visibleCount(camera.zoom());
     const [x0, y0] = camera.toData(camera.w / 4, camera.h / 4), [x1, y1] = camera.toData((camera.w * 3) / 4, (camera.h * 3) / 4);
@@ -53,7 +53,7 @@ export class StarField {
       if (!r.ok) throw new Error(String(r.status));
       this.add(await r.json());
     } catch {
-      // 読めなかったら（サーバーが起きる途中のエラーなど）、次に見えたときに読み直す
+      // 読めなかったら(サーバーが起きる途中のエラーなど)、次に見えたときに読み直す
       this.loaded.delete(key);
     }
   }

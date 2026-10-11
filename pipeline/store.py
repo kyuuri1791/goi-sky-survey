@@ -1,15 +1,15 @@
-"""アプリが読む単語の情報を、サーバーがそのまま型付き配列として読めるバイナリで書き出す（読む側は src/server/data.ts）。
+"""アプリが読む単語の情報を、サーバーがそのまま型付き配列として読めるバイナリで書き出す(読む側は src/server/data.ts)。
 
 JSON にすると、サーバーが起動するたびに 39 万語ぶんを読んで組み立てることになり、メモリも CPU も多く使うため。
 どれもリトルエンディアン。各部分の始まりは 4 バイト単位にそろえる。
 
-  words.bin     "GWD1"、語数 n（u32）、語の並びのハッシュ（8 バイト）、予約（u32）
-                x（f32[n]）、y（f32[n]）、頻度順位（u32[n]）、品詞の番号（u8[n]）、隠す語（u8[n]）
-                表示の書き方: 始まりの位置（u32[n+1]）、UTF-8 をつなげたもの
-  lookup.bin    "GLK1"、件数 m（u32）
-                検索で引く書き方: 始まりの位置（u32[m+1]）、語の番号（u32[m]）、種類（u8[m]。0 = 書き方そのもの、1 = 読みや別の書き方）、
-                UTF-8 をつなげたもの（バイト順に並べてあるので二分探索で引ける）
-  vectors-*.bin 語ごとに倍率（f32）＋ 1 バイトに丸めたベクトル（i8 × 300）。GitHub の 1 ファイル 100MB の上限より小さくなるよう、前半と後半に分ける
+  words.bin     "GWD1"、語数 n(u32)、語の並びのハッシュ(8 バイト)、予約(u32)
+                x(f32[n])、y(f32[n])、頻度順位(u32[n])、品詞の番号(u8[n])、隠す語(u8[n])
+                表示の書き方: 始まりの位置(u32[n+1])、UTF-8 をつなげたもの
+  lookup.bin    "GLK1"、件数 m(u32)
+                検索で引く書き方: 始まりの位置(u32[m+1])、語の番号(u32[m])、種類(u8[m]。0 = 書き方そのもの、1 = 読みや別の書き方)、
+                UTF-8 をつなげたもの(バイト順に並べてあるので二分探索で引ける)
+  vectors-*.bin 語ごとに倍率(f32)＋ 1 バイトに丸めたベクトル(i8 × 300)。GitHub の 1 ファイル 100MB の上限より小さくなるよう、前半と後半に分ける
 """
 
 import hashlib
@@ -26,7 +26,7 @@ def _pad(f) -> None:
 
 
 def _strings(f, texts: list[str]) -> None:
-    """文字列の並びを、始まりの位置（u32[len+1]）と UTF-8 をつなげたもので書く"""
+    """文字列の並びを、始まりの位置(u32[len+1])と UTF-8 をつなげたもので書く"""
     blobs = [t.encode() for t in texts]
     f.write(np.concatenate([[0], np.cumsum([len(b) for b in blobs])]).astype("<u4").tobytes())
     f.write(b"".join(blobs))
@@ -47,7 +47,7 @@ def write_words(path: Path, words: list[str], display: list[str], x, y, rank, po
 
 
 def read_positions(path: Path) -> tuple[bytes, np.ndarray, np.ndarray]:
-    """words.bin から、語の並びのハッシュと位置を読む（配置を変えずに作り直すとき用）"""
+    """words.bin から、語の並びのハッシュと位置を読む(配置を変えずに作り直すとき用)"""
     buf = path.read_bytes()
     assert buf[:4] == b"GWD1", "words.bin の形式が違います"
     (n,) = struct.unpack_from("<I", buf, 4)

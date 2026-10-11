@@ -2,7 +2,7 @@ import "server-only";
 import type { Word, WordResult } from "@/shared/types.ts";
 import { getHiddenIds, getIndex, getLookup, getNeighbors, getVectors, getWords, MAX_PART_LEN, NEIGHBORS } from "./data.ts";
 
-/** ブラウザに渡す位置は小数 5 桁に丸める（f32 のまま JSON にすると桁が多くなる） */
+/** ブラウザに渡す位置は小数 5 桁に丸める(f32 のまま JSON にすると桁が多くなる) */
 export const round5 = (v: number) => Math.round(v * 1e5) / 1e5;
 
 export function info(id: number, score?: number): Word {
@@ -11,9 +11,9 @@ export function info(id: number, score?: number): Word {
 }
 
 /**
- * 入力の文字列を語の番号の列にする。そのまま語彙にあればその語（書き方、別名の順に探す）、
- * なければ語彙にある語で前から一番長く切っていく（「家系ラーメン」→「家系」「ラーメン」）。切れない文字が残れば null。
- * 切るときの別名は 3 文字以上に限る（「冬のこたつ」の「のこ」が「野小」になったりしないように）
+ * 入力の文字列を語の番号の列にする。そのまま語彙にあればその語(書き方、別名の順に探す)、
+ * なければ語彙にある語で前から一番長く切っていく(「家系ラーメン」→「家系」「ラーメン」)。切れない文字が残れば null。
+ * 切るときの別名は 3 文字以上に限る(「冬のこたつ」の「のこ」が「野小」になったりしないように)
  */
 export function resolve(text: string): number[] | null {
   const lookup = getLookup();
@@ -52,7 +52,7 @@ export async function combine(ids: number[]): Promise<Float32Array> {
   return v;
 }
 
-/** 語 id に使われ方の近い語（前もって計算した表を引くだけ）。隠す語は除く */
+/** 語 id に使われ方の近い語(前もって計算した表を引くだけ)。隠す語は除く */
 export function neighborsOf(id: number): Word[] {
   const { ids, scores } = getNeighbors();
   const hiddenIds = getHiddenIds();
@@ -63,7 +63,7 @@ export function neighborsOf(id: number): Word[] {
   return out;
 }
 
-/** 語彙にある語 id を引いた答え（その語と近い語） */
+/** 語彙にある語 id を引いた答え(その語と近い語) */
 export function wordResult(id: number): WordResult {
   return { word: info(id), neighbors: neighborsOf(id) };
 }
@@ -71,7 +71,7 @@ export function wordResult(id: number): WordResult {
 /** インデックスで大まかに絞る候補の数。この中から、1 バイトに丸めたベクトルで近さを計算し直して上位を決める */
 const CANDIDATES = 200;
 
-/** v に使われ方の近い語（複合語のように表にない問い合わせに使う）。隠す語と exclude は除く */
+/** v に使われ方の近い語(複合語のように表にない問い合わせに使う)。隠す語と exclude は除く */
 export async function nearest(v: Float32Array, k: number, exclude: number[] = []): Promise<Word[]> {
   const ex = new Set([...getHiddenIds(), ...exclude]);
   const vectors = await getVectors();

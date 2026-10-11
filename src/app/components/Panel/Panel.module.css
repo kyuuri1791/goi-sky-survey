@@ -55,7 +55,7 @@
   border-top: 1px solid var(--line);
   padding-top: 8px;
 }
-/* 近い語の一覧の 1 行（押すとその語へ飛ぶ） */
+/* 近い語の一覧の 1 行(押すとその語へ飛ぶ) */
 .neighbor {
   all: unset;
   cursor: pointer;

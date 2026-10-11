@@ -1,6 +1,6 @@
 /* いくつかのコンポーネントで使う見た目 */
 
-/* 枠付きの小さなボタン（button にも a にも使う） */
+/* 枠付きの小さなボタン(button にも a にも使う) */
 .button {
   all: unset;
   cursor: pointer;
@@ -15,7 +15,7 @@
   color: var(--fg);
 }
 
-/* 品詞の色の丸（色は style で渡す） */
+/* 品詞の色の丸(色は style で渡す) */
 .chip {
   display: inline-block;
   vertical-align: 1px;
