@@ -105,7 +105,7 @@ export class Renderer {
     const mag = Math.log10(id + 10);
     const r = Math.max(hi ? 2 : 0.6, 3.2 - mag * 0.7) * (0.85 + Math.min(z, 8) * 0.04);
     const tw = id < 400 ? 0.85 + 0.15 * Math.sin(t / 700 + id * 1.7) : 1;
-    const a = Math.min(1, (1.25 - mag * 0.22) * appear * tw);
+    const a = Math.min(1, (1.25 - mag * 0.18) * appear * tw);
     const [cr, cg, cb] = posRgb(p.pos);
     if (r > 1.6) {
       const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 4);
