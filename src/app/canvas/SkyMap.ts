@@ -18,6 +18,8 @@ type Events = {
 
 /** 画面の真ん中にこれだけ点がなければ、何もない所へ行き過ぎているとみなす */
 const MIN_STARS = 40;
+/** 冒頭の演出で、語の近くから全体の表示まで引くのにかける時間(ms) */
+const INTRO_MS = 2000;
 
 export class SkyMap {
   private ctx: CanvasRenderingContext2D;
@@ -91,8 +93,8 @@ export class SkyMap {
     this.select(w, neighbors, false);
     this.timers.push(
       setTimeout(() => {
-        this.camera.flyTo(this.camera.homeView(), 3000);
-        this.timers.push(setTimeout(() => (this.introDone = true), 3000));
+        this.camera.flyTo(this.camera.homeView(), INTRO_MS);
+        this.timers.push(setTimeout(() => (this.introDone = true), INTRO_MS));
         // 引き始めたら目印は薄くして消す(そのあいだに別の語を選んでいたら、そちらは残す)
         if (this.selection.word?.id === w.id) this.selection.fadeOut();
       }, 900),
