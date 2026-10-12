@@ -11,7 +11,7 @@ export default function Panel({ panel, onPick }: { panel: PanelData; onPick: (w:
 
   return (
     <div className={styles.panel}>
-      {panel.composite && <div className={styles.kind}>語彙にない語</div>}
+      {panel.composite && <div className={styles.kind}>{panel.composite.map((w) => w.text).join(" ＋ ")}</div>}
       <div className={styles.head}>
         <h2 className={styles.word} style={{ color: panel.composite ? VIRTUAL_COLOR : posColor(panel.word.pos) }}>
           {panel.word.text}
