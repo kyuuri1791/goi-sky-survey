@@ -37,7 +37,8 @@ export function resolve(text: string): number[] | null {
         break;
       }
     }
-    if (found < 0) return null;
+    // 4 を上限にする
+    if (found < 0 || out.length === 4) return null;
     out.push(found);
     i += len;
   }
