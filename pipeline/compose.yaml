@@ -1,4 +1,4 @@
-# データを作る環境。npm run data:all などから呼ぶ(package.json を参照)
+# データを作る環境。npm run data:all などから呼ぶ
 name: goi-sky-survey
 services:
   pipeline:

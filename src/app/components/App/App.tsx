@@ -1,7 +1,7 @@
 "use client";
 
 // 画面全体: 地図(canvas)と、タイトル・パネル・凡例・検索欄。
-// 地図は src/app/canvas/SkyMap.ts が描き、ここは語を引いてパネルに出したり、地図に飛ぶよう頼んだりする
+// 地図は SkyMap が描き、ここは語を引いてパネルに出したり、地図に飛ぶよう頼んだりする
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { SkyMap } from "@/app/canvas/SkyMap.ts";
 import About from "@/app/components/About/About.tsx";
@@ -13,7 +13,7 @@ import type { TilePoint, WordResult } from "@/types.ts";
 import styles from "./App.module.css";
 import { CURATED_WORDS } from "./curated.ts";
 
-/** 語を引く API(src/app/api)の答え。見つからなかったときや、読めなかったときは error に理由が入る */
+/** 語を引く API の答え。見つからなかったときや、読めなかったときは error に理由が入る */
 type Lookup = WordResult | { error: string };
 
 /** 語を引く。path は /api/word/語(検索。語彙にない複合語も引ける)か /api/neighbors/番号(星や近い語を押したとき) */
@@ -67,7 +67,7 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
     if (await open(fetchWord(`/api/word/${encodeURIComponent(text)}`), text)) inputRef.current?.blur();
   };
 
-  /** 一覧(src/app/components/App/curated.ts)からランダムに選んだ面白い語へ飛ぶ。今見ている語は選ばない */
+  /** 面白い語の一覧からランダムに選んだ語へ飛ぶ。今見ている語は選ばない */
   const surprise = () => {
     const pool = CURATED_WORDS.filter((w) => w !== panel?.query);
     void search(pool[Math.floor(Math.random() * pool.length)]);
@@ -85,8 +85,8 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
       const n = ++latest.current;
       void fetchWord(`/api/word/${encodeURIComponent(shared)}`).then((d) => showShared(n, d, shared));
     } else {
-      // 最初は「猫」の近くから始めて、ゆっくり引いて全体を見せる
-      // (「猫」と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる)
+      // 最初の語の近くから始めて、ゆっくり引いて全体を見せる
+      // (最初の語と近い語はページに入れてあるので、サーバーの応答を待たずにすぐ出せる)
       map.playIntro(intro.word, intro.neighbors);
     }
     return () => {

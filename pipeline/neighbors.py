@@ -3,7 +3,7 @@
 点を押したときと、語彙にある語を検索したときは、アプリはこの表を引くだけにする(src/lib/words.ts)。
 語彙にある語なら、検索のたびに全部の語と比べるより速い。
 
-書き出す先は neighbors.db(形式は store.py)。自分自身は含まない。
+書き出す先は neighbors.db。自分自身は含まない。
 """
 
 from pathlib import Path

@@ -12,7 +12,7 @@ export const MAX_LEVEL = 5;
 /** 拡大率 z で見せる語の数 */
 export const visibleCount = (z: number) => BASE * Math.max(1, z) ** EXP;
 
-/** 語 id が現れる段: 4000 × (2^L)^1.6 > id となる一番小さい L */
+/** 語 id が現れる段: BASE × (2^L)^EXP > id となる一番小さい L */
 export const levelOf = (id: number) => (id < BASE ? 0 : Math.min(MAX_LEVEL, Math.ceil(Math.log2((id / BASE) ** (1 / EXP)))));
 
 /** 段 level で、平面の座標 v(x か y)が入るタイルの番号(0 〜 2^level − 1) */

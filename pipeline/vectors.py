@@ -44,7 +44,7 @@ def write(out: Path, vecs: np.ndarray) -> None:
 
 
 def read(out: Path) -> np.ndarray:
-    """書き出したベクトルを語の番号の順に戻す(bench.py 用)"""
+    """書き出したベクトルを語の番号の順に戻す"""
     parts = []
     for i in range(FILES):
         db = connect(out / f"vectors-{i}.db")
