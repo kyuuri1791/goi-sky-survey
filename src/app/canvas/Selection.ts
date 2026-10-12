@@ -28,6 +28,11 @@ export class Selection {
     if (this.word) this.fadeStart = performance.now();
   }
 
+  /** 目印を薄くして消している途中か */
+  get fading() {
+    return this.fadeStart !== null;
+  }
+
   /** 目印の濃さ(1 ならそのまま)。消し終わっていたら目印を外す */
   opacity() {
     const fade = this.fadeStart === null ? 1 : Math.max(0, 1 - (performance.now() - this.fadeStart) / FADE_MS);

@@ -103,8 +103,8 @@ export class MarkLabels {
   /** 語ごとの、前のフレームで使った置き場所の番号(候補の並びの中の位置) */
   private prev = new Map<number, number>();
 
-  /** measure: 名前の幅を測る */
-  place(marks: Word[], selectedId: number | undefined, camera: Camera, measure: (text: string) => number): MarkLabel[] {
+  /** measure: 名前の幅を測る。fading: 薄くして消している途中か */
+  place(marks: Word[], selectedId: number | undefined, camera: Camera, measure: (text: string) => number, fading: boolean): MarkLabel[] {
     const boxes: Box[] = [];
     const out: MarkLabel[] = [];
     const next = new Map<number, number>();
@@ -128,7 +128,7 @@ export class MarkLabels {
       };
       const prev = this.prev.get(m.id) ?? -1;
       const firstNear = near.findIndex((_, i) => free(i));
-      let i = prev < near.length && free(prev) ? prev : firstNear;
+      let i = fading && prev >= 0 ? prev : prev < near.length && free(prev) ? prev : firstNear;
       if (i < 0) i = free(prev) ? prev : spots.findIndex((_, j) => free(j));
       if (i < 0) i = 0;
       next.set(m.id, i);
