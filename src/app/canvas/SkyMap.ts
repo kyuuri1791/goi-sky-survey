@@ -82,7 +82,7 @@ export class SkyMap {
 
   /** 最初の範囲(全体の表示)に戻る。目印は薄くして消す */
   goHome() {
-    this.camera.flyTo(this.camera.homeView(), 1200);
+    this.camera.pullBackTo(this.camera.homeView(), 1200);
     this.selection.fadeOut();
   }
 
@@ -93,7 +93,7 @@ export class SkyMap {
     this.select(w, neighbors, false);
     this.timers.push(
       setTimeout(() => {
-        this.camera.flyTo(this.camera.homeView(), INTRO_MS);
+        this.camera.pullBackTo(this.camera.homeView(), INTRO_MS);
         this.timers.push(setTimeout(() => (this.introDone = true), INTRO_MS));
         // 引き始めたら目印は薄くして消す(そのあいだに別の語を選んでいたら、そちらは残す)
         if (this.selection.word?.id === w.id) this.selection.fadeOut();

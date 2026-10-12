@@ -103,14 +103,33 @@ export class Camera implements View {
     return { x: cx + (this.w / 2 - area.cx) / s, y: cy + (this.h / 2 - area.cy) / s, s };
   }
 
-  /** 視点 to へ ms かけて飛ぶ(遠くへは、いったん引いてから寄る) */
+  /** 語から語へ、視点 to まで ms かけて飛ぶ(遠くへは、いったん両方が見える所まで引いてから寄る) */
   flyTo(to: View, ms = 1400) {
+    const from = { x: this.x, y: this.y, s: this.s };
+    const dist = Math.hypot(to.x - from.x, to.y - from.y);
+    const midS = Math.min(from.s, to.s, (Math.min(this.w, this.h) * 0.5) / Math.max(dist, 0.01));
+    const easeInOut = (p: number) => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2);
+    this.animate(to, ms, easeInOut, (e) => {
+      const ls = e < 0.5 ? Math.log(from.s) + (Math.log(midS) - Math.log(from.s)) * (e * 2) : Math.log(midS) + (Math.log(to.s) - Math.log(midS)) * ((e - 0.5) * 2);
+      return { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, s: Math.exp(ls) };
+    });
+  }
+
+  /**
+   * 全体の表示などへ、視点 to まで ms かけて引く。大きく引くとき、拡大だけ先に終わって画面が流れて戻らないよう、
+   * 拡大と移動を合わせて決める。引き始めるまでがまどろっこしく見えないよう、出だしからすぐ動かす
+   */
+  pullBackTo(to: View, ms: number) {
     const path = zoomPath({ x: this.x, y: this.y, s: this.s }, to, Math.min(this.w, this.h));
+    this.animate(to, ms, (p) => 1 - (1 - p) ** 3, path);
+  }
+
+  /** ms かけて path(ease(経過の割合)) の視点を順にとり、最後は to に止まる */
+  private animate(to: View, ms: number, ease: (p: number) => number, path: (e: number) => View) {
     const t0 = performance.now();
     this.flight = (now) => {
       const p = Math.min(1, (now - t0) / ms);
-      const e = 1 - (1 - p) ** 3;
-      this.set(p >= 1 ? to : path(e));
+      this.set(p >= 1 ? to : path(ease(p)));
       if (p >= 1) this.flight = null;
     };
   }
