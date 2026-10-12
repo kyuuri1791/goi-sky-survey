@@ -1,4 +1,4 @@
-import { posColor, posName } from "@/app/styles/pos.ts";
+import { posColor, posName, VIRTUAL_COLOR } from "@/app/styles/pos.ts";
 import ui from "@/app/styles/ui.module.css";
 import type { Word, WordResult } from "@/types.ts";
 import styles from "./Panel.module.css";
@@ -11,23 +11,27 @@ export default function Panel({ panel, onPick }: { panel: PanelData; onPick: (w:
 
   return (
     <div className={styles.panel}>
-      {panel.composite && <div className={styles.kind}>{panel.composite.map((w) => w.text).join(" ＋ ")} に近い語</div>}
+      {panel.composite && <div className={styles.kind}>語彙にない語</div>}
       <div className={styles.head}>
-        <h2 className={styles.word} style={{ color: posColor(panel.word.pos) }}>{panel.word.text}</h2>
+        <h2 className={styles.word} style={{ color: panel.composite ? VIRTUAL_COLOR : posColor(panel.word.pos) }}>
+          {panel.word.text}
+        </h2>
         <a className={`${ui.button} ${styles.share}`} href={intent.href} target="_blank">
           Xで共有
         </a>
       </div>
-      <dl className={styles.facts}>
-        <dt className={styles.factLabel}>頻度順位</dt>
-        <dd className={styles.factValue}>#{panel.word.rank.toLocaleString()}</dd>
-        <dt className={styles.factLabel}>品詞</dt>
-        <dd className={styles.factValue}>
-          <b className={ui.chip} style={{ background: posColor(panel.word.pos) }} />
-          {posName(panel.word.pos)}
-        </dd>
-      </dl>
-      <h3 className={styles.heading}>使われ方の近い語</h3>
+      {!panel.composite && (
+        <dl className={styles.facts}>
+          <dt className={styles.factLabel}>頻度順位</dt>
+          <dd className={styles.factValue}>#{panel.word.rank.toLocaleString()}</dd>
+          <dt className={styles.factLabel}>品詞</dt>
+          <dd className={styles.factValue}>
+            <b className={ui.chip} style={{ background: posColor(panel.word.pos) }} />
+            {posName(panel.word.pos)}
+          </dd>
+        </dl>
+      )}
+      <h3 className={styles.heading}>使われ方の近い語(TOP{panel.neighbors.length})</h3>
       {panel.neighbors.map((w) => (
         <button key={w.id} className={styles.neighbor} onClick={() => onPick(w)}>
           <span>

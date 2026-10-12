@@ -1,6 +1,6 @@
 // 地図を描く: 背景、点、語の名前、選んだ語と近い語の目印。
 // 直前に描いた点と名前の位置を覚えておき、タップでどの語を選ぶか決めるのにも使う
-import { posColor, posRgb } from "@/app/styles/pos.ts";
+import { posColor, posRgb, VIRTUAL_COLOR } from "@/app/styles/pos.ts";
 import { visibleCount } from "@/lib/levels.ts";
 import type { Word } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
@@ -8,6 +8,9 @@ import { type Box, type LabelCand, Labels, MarkLabels } from "./Labels.ts";
 import type { Selection } from "./Selection.ts";
 import type { Star, StarField } from "./StarField.ts";
 import { labelFont, MARK_FONT } from "./style.ts";
+
+/** 選んだ語と近い語を結ぶ線の色 */
+const LINE_COLOR = "rgba(220,228,245,0.7)";
 
 /** 1 フレームを描くあいだ使う値。labelCands には、点を描きながら名前の候補を集める */
 type Frame = { t: number; z: number; vis: number; labelMax: number; labelCands: LabelCand[] };
@@ -54,8 +57,8 @@ export class Renderer {
     ctx.globalAlpha = fade;
     // 線(星と名前のあとに描いて、埋もれないようにする)
     if (selection.word) this.drawLines(selection.word, selection.neighbors);
-    // 選んだ語と近い語の点を描いてから、名前を描く(名前が点に隠れないように)
-    for (const m of marks) this.drawStar(frame, m, true);
+    // 選んだ語と近い語の点を描いてから、名前を描く(名前が点に隠れないように)。複合語の仮の点は語彙にないので、点は描かない
+    for (const m of marks) if (m.id >= 0) this.drawStar(frame, m, true);
     this.drawMarkLabels(selection);
     if (selection.word) this.drawRing(selection.word);
     ctx.globalAlpha = 1;
@@ -143,7 +146,7 @@ export class Renderer {
     const { ctx } = this;
     ctx.lineWidth = 1.3;
     ctx.setLineDash([3, 5]);
-    ctx.strokeStyle = "rgba(220,228,245,0.7)";
+    ctx.strokeStyle = LINE_COLOR;
     const [ax, ay] = this.camera.toScreen(word.x, word.y);
     for (const n of neighbors) {
       const [bx, by] = this.camera.toScreen(n.x, n.y);
@@ -160,7 +163,7 @@ export class Renderer {
     const { ctx } = this;
     ctx.font = MARK_FONT;
     for (const { word, sx, sy, spot, leader } of this.markLabels.place(selection.marks, selection.word?.id, this.camera, (text) => ctx.measureText(text).width)) {
-      this.hitLabels.push({ ...spot, id: word.id });
+      if (word.id >= 0) this.hitLabels.push({ ...spot, id: word.id });
       if (leader) {
         ctx.strokeStyle = "rgba(220,228,245,0.5)";
         ctx.lineWidth = 1;
@@ -171,22 +174,24 @@ export class Renderer {
       }
       ctx.fillStyle = "rgba(3,5,11,0.65)";
       ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
-      // 名前は、点と同じ品詞の色にする(凡例・パネルとそろえる)
-      ctx.fillStyle = posColor(word.pos);
+      // 名前は、点と同じ品詞の色にする(凡例・パネルとそろえる)。複合語の仮の点は線と同じ色
+      ctx.fillStyle = word.id >= 0 ? posColor(word.pos) : VIRTUAL_COLOR;
       ctx.textBaseline = "top";
       ctx.fillText(word.text, spot.x, spot.y + 1);
       ctx.textBaseline = "middle";
     }
   }
 
-  /** 選んだ語の周りの丸 */
+  /** 選んだ語の周りの丸。複合語の仮の点は、語彙にある語と見分けられるよう点線にする */
   private drawRing(word: Word) {
     const { ctx } = this;
     const [sx, sy] = this.camera.toScreen(word.x, word.y);
-    ctx.strokeStyle = posColor(word.pos);
+    ctx.strokeStyle = word.id >= 0 ? posColor(word.pos) : VIRTUAL_COLOR;
     ctx.lineWidth = 1.2;
+    if (word.id < 0) ctx.setLineDash([3, 3]);
     ctx.beginPath();
     ctx.arc(sx, sy, 10, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 }

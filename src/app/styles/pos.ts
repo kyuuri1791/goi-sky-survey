@@ -19,3 +19,6 @@ const COLORS: Rgb[] = [
 export const posRgb = (pos: number): Rgb => COLORS[pos] ?? COLORS[5];
 export const posColor = (pos: number) => `rgb(${posRgb(pos)})`;
 export const posName = (pos: number) => POS_NAMES[pos] ?? "";
+
+/** 語彙にない複合語の仮の点の色(地図の丸と名前・パネルの見出しで同じものを使う)。品詞の色と見分けられるよう、Okabe-Ito の残りの黄色にする */
+export const VIRTUAL_COLOR = "rgb(240,228,66)";
