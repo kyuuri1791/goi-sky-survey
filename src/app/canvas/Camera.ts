@@ -105,15 +105,12 @@ export class Camera implements View {
 
   /** 視点 to へ ms かけて飛ぶ(遠くへは、いったん引いてから寄る) */
   flyTo(to: View, ms = 1400) {
-    const from = { x: this.x, y: this.y, s: this.s };
+    const path = zoomPath({ x: this.x, y: this.y, s: this.s }, to, Math.min(this.w, this.h));
     const t0 = performance.now();
-    const dist = Math.hypot(to.x - from.x, to.y - from.y);
-    const midS = Math.min(from.s, to.s, (Math.min(this.w, this.h) * 0.5) / Math.max(dist, 0.01));
     this.flight = (now) => {
       const p = Math.min(1, (now - t0) / ms);
-      const e = p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
-      const ls = p < 0.5 ? Math.log(from.s) + (Math.log(midS) - Math.log(from.s)) * (e * 2) : Math.log(midS) + (Math.log(to.s) - Math.log(midS)) * ((e - 0.5) * 2);
-      this.set({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, s: Math.exp(ls) });
+      const e = 1 - (1 - p) ** 3;
+      this.set(p >= 1 ? to : path(e));
       if (p >= 1) this.flight = null;
     };
   }
@@ -127,4 +124,31 @@ export class Camera implements View {
   update(now: number) {
     this.flight?.(now);
   }
+}
+
+/** 飛ぶときに引く度合い(大きいほど、遠くへ飛ぶときに大きく引く。d3 の既定と同じ) */
+const RHO = Math.SQRT2;
+
+/**
+ * 視点 a から b への道筋(t = 0〜1 の視点を返す)。van Wijk と Nuij の方法(d3 の interpolateZoom と同じ)で、
+ * 拡大と移動を合わせて決め、画面の中の動きがなめらかになるようにする(拡大だけ先に終わって、そのあと横に流れたりしない)。
+ * size: 画面の大きさ(px)。w は画面に見える平面の幅(size / s)
+ */
+function zoomPath(a: View, b: View, size: number): (t: number) => View {
+  const w0 = size / a.s, w1 = size / b.s;
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+  if (d < 1e-12) {
+    const k = Math.log(w1 / w0);
+    return (t) => ({ x: a.x, y: a.y, s: size / (w0 * Math.exp(k * t)) });
+  }
+  const r = (w: number, sign: number) => {
+    const bb = (w1 * w1 - w0 * w0 + sign * RHO ** 4 * d * d) / (2 * w * RHO ** 2 * d);
+    return Math.log(Math.sqrt(bb * bb + 1) - bb);
+  };
+  const r0 = r(w0, 1), r1 = r(w1, -1);
+  const S = (r1 - r0) / RHO;
+  return (t) => {
+    const u = (w0 / (RHO ** 2 * d)) * (Math.cosh(r0) * Math.tanh(RHO * t * S + r0) - Math.sinh(r0));
+    return { x: a.x + u * dx, y: a.y + u * dy, s: size / ((w0 * Math.cosh(r0)) / Math.cosh(RHO * t * S + r0)) };
+  };
 }
