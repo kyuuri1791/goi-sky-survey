@@ -106,7 +106,10 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
   }, []);
 
   // 選んでいる語を URL に入れておく(/?w=語)。そのままアドレスを送れば、相手も同じ語から見られる
+  const shown = useRef(false);
   useEffect(() => {
+    if (!panel && !shown.current) return;
+    shown.current = true;
     const url = new URL(location.href);
     if (panel) url.searchParams.set("w", panel.query);
     else url.searchParams.delete("w");
