@@ -147,12 +147,12 @@ export class SkyMap {
     if (after < MIN_STARS && after <= before && dist(camera.x, camera.y) > dist(fromX, fromY)) [camera.x, camera.y] = [fromX, fromY];
   }
 
-  /** 画面の (sx, sy) を中心に f 倍に拡大する */
+  /** 画面の (sx, sy) を中心に f 倍に拡大する(引けるのは全体の表示の 0.8 倍まで) */
   private zoomAt(f: number, sx: number, sy: number) {
     this.moveLimited(() => {
       const { camera } = this;
       const [dx, dy] = camera.toData(sx, sy);
-      camera.s = Math.min(camera.fitScale() * 600, Math.max(camera.fitScale() * 0.5, camera.s * f));
+      camera.s = Math.min(camera.fitScale() * 600, Math.max(camera.fitScale() * 0.8, camera.s * f));
       camera.x = dx - (sx - camera.w / 2) / camera.s;
       camera.y = dy - (sy - camera.h / 2) / camera.s;
     });
