@@ -90,8 +90,8 @@ class BoxGrid {
   }
 }
 
-/** 選んだ語と近い語の名前を置く場所。leader は、点から離して置いたときに点とつなぐ線の名前側の端 */
-export type MarkLabel = { word: Word; sx: number; sy: number; spot: Box; leader: [number, number] | null };
+/** 選んだ語と近い語の名前を置く場所 */
+export type MarkLabel = { word: Word; spot: Box };
 
 /**
  * 選んだ語と近い語の名前を、点の周りの重ならない所に置く。
@@ -134,8 +134,7 @@ export class MarkLabels {
       next.set(m.id, i);
       const spot = spots[i];
       boxes.push(spot);
-      const cx = Math.max(spot.x, Math.min(spot.x + spot.w, sx)), cy = Math.max(spot.y, Math.min(spot.y + spot.h, sy));
-      out.push({ word: m, sx, sy, spot, leader: Math.hypot(cx - sx, cy - sy) > r + 10 ? [cx, cy] : null });
+      out.push({ word: m, spot });
     }
     this.prev = next;
     return out;

@@ -158,20 +158,12 @@ export class Renderer {
     ctx.setLineDash([]);
   }
 
-  /** 選んだ語と近い語の名前。点から離して置いたときは、点と名前を細い線でつなぐ */
+  /** 選んだ語と近い語の名前 */
   private drawMarkLabels(selection: Selection) {
     const { ctx } = this;
     ctx.font = MARK_FONT;
-    for (const { word, sx, sy, spot, leader } of this.markLabels.place(selection.marks, selection.word?.id, this.camera, (text) => ctx.measureText(text).width, selection.fading)) {
+    for (const { word, spot } of this.markLabels.place(selection.marks, selection.word?.id, this.camera, (text) => ctx.measureText(text).width, selection.fading)) {
       if (word.id >= 0) this.hitLabels.push({ ...spot, id: word.id });
-      if (leader) {
-        ctx.strokeStyle = "rgba(220,228,245,0.5)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(...leader);
-        ctx.stroke();
-      }
       ctx.fillStyle = "rgba(3,5,11,0.65)";
       ctx.fillRect(spot.x - 2, spot.y, spot.w + 4, spot.h);
       // 名前は、点と同じ品詞の色にする(凡例・パネルとそろえる)。複合語の仮の点は線と同じ色
