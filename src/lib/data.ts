@@ -10,6 +10,7 @@ export const MAX_PART_LEN = 20;
 const CHUNK = 1024;
 const DIM = 300;
 const STRIDE = 304;
+const PIECE = 8192;
 
 const DIR = path.join(process.cwd(), "data");
 const g = globalThis as { __goi?: Map<string, unknown> };
@@ -62,8 +63,10 @@ function vectors() {
     const wasm = new WebAssembly.Module(fs.readFileSync(path.join(process.cwd(), "src/lib/dots.wasm")));
     const { dots } = new WebAssembly.Instance(wasm, { env: { memory } }).exports as { dots: (q: number, v: number, n: number, out: number) => void };
     const bytes = new Uint8Array(memory.buffer), norms = new Float32Array(n);
-    for (const r of sql(each("id, data, norms")).iterate() as Iterable<{ id: number; data: Uint8Array; norms: Uint8Array }>) {
-      bytes.set(r.data, VECS + r.id * CHUNK * STRIDE);
+    // ベクトルは 8KB ずつ切り出して読む(まとまりごと読むと、node:sqlite が作る大きな一時的なバッファの分がメモリに残る)
+    const piece = sql(vectorFiles().map((_, i) => `select substr(data, ?2, ?3) as d from vectors${i}.chunks where id = ?1`).join(" union all "));
+    for (const r of sql(each("id, length(data) as len, norms")).all() as { id: number; len: number; norms: Uint8Array }[]) {
+      for (let o = 0; o < r.len; o += PIECE) bytes.set((piece.get(r.id, o + 1, Math.min(PIECE, r.len - o)) as { d: Uint8Array }).d, VECS + r.id * CHUNK * STRIDE + o);
       norms.set(new Float32Array(r.norms.buffer.slice(r.norms.byteOffset, r.norms.byteOffset + r.norms.length)), r.id * CHUNK);
     }
     return { n, memory, dots, norms, OUT, Q, VECS };
