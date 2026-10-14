@@ -6,7 +6,7 @@
   4. UMAP で 2 次元に並べる
   5. 各語のベクトルを 1 バイトに丸めて書き出す
   6. 全部の語の近い語を計算する
-  7. /out(= data/)に words.db、neighbors.db、vectors-*.bin を書き出す
+  7. /out(= data/)に words.db、neighbors.db、vectors-*.db を書き出す
 
   python -m build             全部作る
   python -m build meta        書き方・品詞・別名だけ作り直す(配置は今の data/words.db のまま)

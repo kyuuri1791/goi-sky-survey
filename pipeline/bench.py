@@ -1,5 +1,5 @@
 """複合語の検索で、全部と比べた本物の上位 10 語をどれだけ当てられるか(再現率)を測る。npm run data:bench から compose 経由で呼ぶ。
-アプリ(src/lib/words.ts)と同じ手順をなぞる: 分けた語の 1 バイトに丸めたベクトル(data/vectors-*.bin)を長さ 1 にそろえて足し、
+アプリ(src/lib/words.ts)と同じ手順をなぞる: 分けた語の 1 バイトに丸めたベクトル(data/vectors-*.db)を長さ 1 にそろえて足し、
 1 バイトに丸め直して、全部の語と cos で比べる。"""
 
 from pathlib import Path
