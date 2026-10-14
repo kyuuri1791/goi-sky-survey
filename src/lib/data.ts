@@ -2,7 +2,6 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
-import { getLoadablePath } from "sqlite-vec";
 
 /** 複合語を分けるときに試す、一番長い語の文字数 */
 export const MAX_PART_LEN = 20;
@@ -33,7 +32,7 @@ const vectorFiles = () => once("vectorFiles", () => fs.readdirSync(DIR).filter((
 function db(): DatabaseSync {
   return once("db", () => {
     const db = new DatabaseSync(path.join(DIR, "words.db"), { readOnly: true, allowExtension: true });
-    db.loadExtension(getLoadablePath());
+    db.loadExtension(path.join(process.cwd(), "vendor/sqlite-vec/vec0.so"));
     db.prepare("attach ? as neighbors").run(path.join(DIR, "neighbors.db"));
     vectorFiles().forEach((f, i) => db.prepare(`attach ? as vectors${i}`).run(path.join(DIR, f)));
     return db;

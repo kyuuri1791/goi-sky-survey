@@ -1,6 +1,6 @@
-# 第三者のデータについて
+# 第三者のデータとソフトウェアについて
 
-このリポジトリの `data/` にあるファイルは、次のデータをもとに作ったものです。どちらも Apache License, Version 2.0 で提供されています。ライセンスの全文は [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) にあります。
+このリポジトリの `data/` にあるファイルは、次のデータをもとに作ったものです。どちらも Apache License, Version 2.0 で提供されています。`vendor/sqlite-vec/` の sqlite-vec も、Apache License, Version 2.0 で利用しています。ライセンスの全文は [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) にあります。
 
 ## chiVe v1.3(mc90)
 
@@ -26,3 +26,13 @@
 使っているファイルと、加えた変更:
 
 - `data/words.db`: 辞書の見出しから決めた、各語の表示用の書き方と品詞の大分類、検索用の読みと別の書き方
+
+## sqlite-vec v0.1.9
+
+- 提供元: <https://github.com/asg017/sqlite-vec>
+- Copyright (c) 2024 Alex Garcia
+- MIT License と Apache License, Version 2.0 のどちらかを選べるもののうち、Apache License, Version 2.0 で利用しています
+
+加えた変更:
+
+- `vendor/sqlite-vec/vec0.so`: 1 バイトのベクトルのコサイン類似度を整数で足す形に変えて(`vendor/sqlite-vec/int8-cosine.patch`)ビルドしたもの

@@ -5,11 +5,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // 開発中に左下に出る Next.js のマークは、凡例と重なるので出さない(エラーは引き続き表示される)
   devIndicators: false,
-  // sqlite-vec は SQLite に読み込ませる拡張(ネイティブのファイル)なので、まとめずに実行時に node_modules から読む
-  serverExternalPackages: ["sqlite-vec"],
-  // データ(SQLite のファイル)は実行時に読むので同梱する。sqlite-vec の拡張のファイルも、読み込み方が動的で自動では含まれないので足す
+  // データ(SQLite のファイル)と、SQLite に読み込ませる sqlite-vec の拡張(vendor/sqlite-vec)は実行時に読むので同梱する
   outputFileTracingIncludes: {
-    "/api/*": ["./data/*.db", "./node_modules/sqlite-vec-linux-*/**"],
+    "/api/*": ["./data/*.db", "./vendor/sqlite-vec/vec0.so"],
   },
   async headers() {
     return [
