@@ -58,7 +58,7 @@ export function wordResult(id: number): WordResult {
 
 /**
  * 語の列 ids(複合語を分けた語)のベクトルを足し合わせた意味に、使われ方の近い語。ids は除く。
- * 1 バイトに丸めたベクトルは語ごとに長さが違うので、長さ 1 にそろえてから足し、1 バイトに丸め直して全部の語と比べる
+ * 1 バイトに丸めたベクトルは語ごとに長さが違うので、長さ 1 にそろえてから足し、1 バイトに丸め直して近い語を探す
  */
 export function nearest(ids: number[], k: number): Word[] {
   const parts = ids.map(vectorOf);
