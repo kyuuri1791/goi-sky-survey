@@ -4,8 +4,8 @@
    i8 *b = (i8 *)pB;
    size_t d = *((size_t *)pD);
  
-+  // Summing in float must stay in order, which keeps the loop from being
-+  // vectorized; int32 sums vectorize and cannot overflow below this bound.
++  // Fast path: summing in int32 lets the compiler vectorize this loop (float
++  // sums can't be reordered). Fall back to float when int32 could overflow.
 +  if (d <= INT32_MAX / (128 * 128)) {
 +    int32_t dot = 0;
 +    int32_t aMag = 0;
