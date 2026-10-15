@@ -5,6 +5,8 @@
   height: 100dvh;
   touch-action: none;
   cursor: crosshair;
+  /* 背景(中央やや下が明るい円)。canvas は透明なので、ここが透けて見える */
+  background: radial-gradient(circle max(100vw, 100dvh) at 50% 60%, #081026, #02030a);
 }
 
 /* 見出しの帯。帯の上でも地図を動かせるよう、押せるのはタイトルとボタンだけにする。

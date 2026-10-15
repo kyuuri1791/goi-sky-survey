@@ -1,6 +1,6 @@
 // 地図を描く: 背景、点、語の名前、選んだ語と近い語の目印。
 // 直前に描いた点と名前の位置を覚えておき、タップでどの語を選ぶか決めるのにも使う
-import { posColor, posRgb, VIRTUAL_COLOR } from "@/app/styles/pos.ts";
+import { POS_NAMES, posColor, posRgb, VIRTUAL_COLOR } from "@/app/styles/pos.ts";
 import { visibleCount } from "@/lib/levels.ts";
 import type { Word } from "@/types.ts";
 import type { Camera } from "./Camera.ts";
@@ -12,8 +12,46 @@ import { labelFont, MARK_FONT } from "./style.ts";
 /** 選んだ語と近い語を結ぶ線の色 */
 const LINE_COLOR = "rgba(220,228,245,0.7)";
 
-/** 1 フレームを描くあいだ使う値。labelCands には、点を描きながら名前の候補を集める */
-type Frame = { t: number; z: number; vis: number; labelMax: number; labelCands: LabelCand[] };
+/** 点とにじみの絵の大きさ(px) */
+const SPRITE = 64;
+
+/**
+ * 品詞の色ごとの、点(塗った円)とにじみ(中心から薄くなる円)の絵
+ */
+function makeSprites(): { dot: HTMLCanvasElement; halo: HTMLCanvasElement }[] {
+  const canvas = (draw: (c: CanvasRenderingContext2D) => void) => {
+    const el = document.createElement("canvas");
+    el.width = el.height = SPRITE;
+    draw(el.getContext("2d")!);
+    return el;
+  };
+  return POS_NAMES.map((_, pos) => {
+    const [r, g, b] = posRgb(pos), h = SPRITE / 2;
+    const dot = canvas((c) => {
+      c.fillStyle = `rgb(${r},${g},${b})`;
+      c.beginPath();
+      c.arc(h, h, h, 0, Math.PI * 2);
+      c.fill();
+    });
+    const halo = canvas((c) => {
+      const grad = c.createRadialGradient(h, h, 0, h, h, h);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.4)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      c.fillStyle = grad;
+      c.fillRect(0, 0, SPRITE, SPRITE);
+    });
+    return { dot, halo };
+  });
+}
+
+/** 小さな点をまとめて塗るときの、濃さの段階の数 */
+const ALPHA_STEPS = 16;
+
+/**
+ * 1 フレームを描くあいだ使う値。labelCands には、点を描きながら名前の候補を集める。
+ * dots には、半径 1px 未満の点を、品詞と濃さの段階ごとに [x, y, 半径, …] で集める(1 つずつ塗ると重いので、あとでまとめて塗る)
+ */
+type Frame = { t: number; z: number; vis: number; labelMax: number; labelCands: LabelCand[]; dots: number[][] };
 
 export class Renderer {
   private labels = new Labels();
@@ -21,6 +59,8 @@ export class Renderer {
   // 直前のフレームで描いた点と名前の位置
   private hitDots: { x: number; y: number; a: number; id: number }[] = [];
   private hitLabels: (Box & { id: number })[] = [];
+  private sprites = makeSprites();
+  private dots: number[][] = Array.from({ length: POS_NAMES.length * ALPHA_STEPS }, () => []);
 
   constructor(
     private ctx: CanvasRenderingContext2D,
@@ -38,7 +78,8 @@ export class Renderer {
     const z = this.camera.zoom();
     // 名前を出す語の数(よく使われる順)。全体を見ているとき(拡大率 1)は出さず、拡大するにつれて増やす。
     // 窓の大きさを変えると拡大率が 1 から少しずれるので、1.3 倍ほどまでは出さない
-    const frame: Frame = { t, z, vis: visibleCount(z), labelMax: 40 * Math.max(0, z ** 1.7 - 1.5), labelCands: [] };
+    const frame: Frame = { t, z, vis: visibleCount(z), labelMax: 40 * Math.max(0, z ** 1.7 - 1.5), labelCands: [], dots: this.dots };
+    for (const d of this.dots) d.length = 0;
     const marks = selection.marks;
     const markIds = new Set(marks.map((m) => m.id));
     ctx.textAlign = "left";
@@ -47,6 +88,7 @@ export class Renderer {
       if (p.id > frame.vis * 1.2) break;
       if (!markIds.has(p.id)) this.drawStar(frame, p, false);
     }
+    this.fillDots(frame);
     // 選んだ語と近い語の点と名前の周りには、ほかの語の名前を置かない
     ctx.font = MARK_FONT;
     const reserved = marks.map((m) => {
@@ -85,13 +127,9 @@ export class Renderer {
     return best;
   }
 
+  /** 背景のグラデーションは canvas の CSS で描くので(毎フレーム画面全体を塗ると重い)、ここでは前のフレームを消すだけ */
   private drawBackground() {
-    const { ctx } = this, { w: W, h: H } = this.camera;
-    const bg = ctx.createRadialGradient(W / 2, H * 0.6, 0, W / 2, H * 0.6, Math.max(W, H));
-    bg.addColorStop(0, "#081026");
-    bg.addColorStop(1, "#02030a");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
+    this.ctx.clearRect(0, 0, this.camera.w, this.camera.h);
   }
 
   /** 点を 1 つ描く。hi: 選んだ語と近い語(必ず描き、名前はここでは出さない) */
@@ -107,22 +145,39 @@ export class Renderer {
     const tw = id < 400 ? 0.85 + 0.15 * Math.sin(t / 700 + id * 1.7) : 1;
     const a = Math.min(1, (1.25 - mag * 0.18) * appear * tw);
     const [cr, cg, cb] = posRgb(p.pos);
-    if (r > 1.6) {
-      const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 4);
-      halo.addColorStop(0, `rgba(${cr},${cg},${cb},${a * 0.4})`);
-      halo.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-      ctx.fillStyle = halo;
-      ctx.fillRect(sx - r * 4, sy - r * 4, r * 8, r * 8);
+    const pos = p.pos >= 0 && p.pos < POS_NAMES.length ? p.pos : POS_NAMES.length - 1;
+    if (r >= 1 || hi) {
+      const { dot, halo } = this.sprites[pos];
+      const base = ctx.globalAlpha;
+      ctx.globalAlpha = base * a;
+      if (r > 1.6) ctx.drawImage(halo, sx - r * 4, sy - r * 4, r * 8, r * 8);
+      ctx.drawImage(dot, sx - r, sy - r, r * 2, r * 2);
+      ctx.globalAlpha = base;
+    } else {
+      frame.dots[pos * ALPHA_STEPS + Math.min(ALPHA_STEPS - 1, Math.round(a * (ALPHA_STEPS - 1)))].push(sx, sy, r);
     }
-    ctx.fillStyle = `rgba(${cr},${cg},${cb},${a})`;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
     this.hitDots.push({ x: sx, y: sy, a, id });
     if (!hi && (id < labelMax || this.labels.isFading(id))) {
       // 名前の濃さには、星のまたたき(tw)を入れない(名前がちらつかないように)
       frame.labelCands.push({ id, text: p.text, x: sx + r + 4, y: sy, size: Math.max(10, 14 - mag * 1.2), color: [cr, cg, cb], a: Math.min(1, a / tw + 0.15) * appear });
     }
+  }
+
+  /**
+   * 集めておいた小さな点を、品詞と濃さの段階ごとにまとめて塗る。直径 2px 未満なので四角にする
+   * (円をたくさん 1 つの図形にまとめると、GPU で描くブラウザでは三角形に分けるのが重い)
+   */
+  private fillDots(frame: Frame) {
+    const { ctx } = this;
+    frame.dots.forEach((d, i) => {
+      if (!d.length) return;
+      ctx.globalAlpha = (i % ALPHA_STEPS) / (ALPHA_STEPS - 1);
+      ctx.fillStyle = posColor(Math.floor(i / ALPHA_STEPS));
+      ctx.beginPath();
+      for (let k = 0; k < d.length; k += 3) ctx.rect(d[k] - d[k + 2], d[k + 1] - d[k + 2], d[k + 2] * 2, d[k + 2] * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
   }
 
   /** ほかの語の名前 */
