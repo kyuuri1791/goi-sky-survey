@@ -11,7 +11,7 @@ import ui from "@/app/styles/ui.module.css";
 import type { HomeView } from "@/lib/levels.ts";
 import type { TilePoint, WordResult } from "@/types.ts";
 import styles from "./App.module.css";
-import { CURATED_WORDS } from "./curated.ts";
+import { CURATED_WORDS, TOPICS } from "./curated.ts";
 
 /** 語を引く API の答え。見つからなかったときや、読めなかったときは error に理由が入る */
 type Lookup = WordResult | { error: string };
@@ -24,6 +24,8 @@ const fetchWord = async (path: string): Promise<Lookup> => {
     return { error: "読み込めませんでした。少し待ってからもう一度お試しください" };
   }
 };
+
+const pick = (words: string[]) => words[Math.floor(Math.random() * words.length)];
 
 export default function App({ home, intro, baseTile }: { home: HomeView; intro: WordResult; baseTile: TilePoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -67,11 +69,8 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
     if (await open(fetchWord(`/api/word/${encodeURIComponent(text)}`), text)) inputRef.current?.blur();
   };
 
-  /** 面白い語の一覧からランダムに選んだ語へ飛ぶ。今見ている語は選ばない */
-  const surprise = () => {
-    const pool = CURATED_WORDS.filter((w) => w !== panel?.query);
-    void search(pool[Math.floor(Math.random() * pool.length)]);
-  };
+  /** words からランダムに選んだ語へ飛ぶ(「EGG」と「分野から探す」)。今見ている語は選ばない */
+  const explore = (words: string[]) => void search(pick(words.filter((w) => w !== panel?.query)));
 
   const onTap = useEffectEvent((id: number | null) => (id === null ? close(false) : void open(fetchWord(`/api/neighbors/${id}`))));
   const showShared = useEffectEvent((n: number, d: Lookup, text: string) => void show(n, d, text));
@@ -137,6 +136,14 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
           </button>
         </nav>
       </header>
+      <nav className={`${styles.topics} ${panel ? styles.withPanel : ""}`}>
+        <span className={styles.topicsLabel}>分野から探す</span>
+        {TOPICS.map((t) => (
+          <button key={t.name} className={`${ui.button} ${styles.topic}`} onClick={() => explore(t.words)}>
+            {t.name}
+          </button>
+        ))}
+      </nav>
       {panel && <Panel panel={panel} onPick={(w) => void open(fetchWord(`/api/neighbors/${w.id}`))} />}
       <div className={styles.legend}>
         <span className={styles.legendTitle}>凡例</span>
@@ -165,9 +172,8 @@ export default function App({ home, intro, baseTile }: { home: HomeView; intro: 
             if (text) void search(text);
           }}
         />
-        <button className={`${ui.button} ${styles.surprise}`} onClick={surprise}>
-          面白い語<span className={styles.wide}>から始める</span>
-          <span className={styles.narrow}>へ</span>
+        <button className={`${ui.button} ${styles.surprise}`} onClick={() => explore(CURATED_WORDS)}>
+          EGG
         </button>
       </div>
       {about && <About onClose={() => setAbout(false)} />}
