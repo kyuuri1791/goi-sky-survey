@@ -26,29 +26,24 @@
 
 v1.3 mc90 の各単語に対する近傍の語はデータを作る段階で前計算している(`pipeline/neighbors.py`)ので入力された語が存在する場合、検索時には表を引くだけとなります。入力が語彙にある単語を組み合わせた複合語の場合、このベクトルは(ほぼ)R^300 の任意の元とみなせて前計算しておけないので、検索のたびに全部の語と比べています。各語のベクトルは 1 バイトに丸めて SQLite のファイル(`data/vectors-*.db`)に入れておき、サーバーではパッチを当てた [sqlite-vec](https://github.com/asg017/sqlite-vec) で引いています。(パッチを当てているのは内積計算でSIMDを効かせて高速化するため)
 
-| 方法 | 本物の上位 10 語を当てた割合 |
-|---|---|
-| 総当り(丸めないベクトル) | 100% |
-| **総当り(1 バイトに丸めたベクトル、sqlite-vec)** | **99%** |
+| 方法 | 本物の上位10語を当てた割合 | 1回の検索 |
+|---|---|---|
+| 総当り(丸めないベクトル) | 100% | 約 190ms |
+| 総当り(1バイトに丸めたベクトル、配布版sqlite-vec) | 99% | 約 200ms |
+| **総当り(1バイトに丸めたベクトル、パッチ版sqlite-vec)** | **99%** | **約 60ms** |
 
-(よく使われる 3 万語から 2 語ずつ選んで足した 200 組を問い合わせにした測定。`npm run data:bench`)
+(よく使われる3万語から2語ずつ選んで足した200組を問い合わせにした測定、1回の検索は39万語全部と比べる時間をローカル(Ryzen 5 7540U)で測ったもの)
 
 ## 開発
-
+Linux x64で動かす想定です。
 ```bash
 npm install
 npm run dev
 ```
 
-sqlite-vec(`vendor/sqlite-vec/vec0.so`、Linux x64 用)はリポジトリに入れてあります。パッチ(`vendor/sqlite-vec/int8-cosine.patch`)を変えたときだけ、Docker の中でビルドし直します。
-
-```bash
-sh vendor/sqlite-vec/build.sh
-```
-
 ### データの作り直し
 
-Python(`pipeline/`)で作って`data/`に SQLite のファイルとして出力します(表の形は `pipeline/store.py`、`pipeline/vectors.py`)。Docker上で動かしています。
+Python(`pipeline/`)で作って`data/`に SQLite のファイルとして出力します。Docker上で動かしています。(docker, docker-composeがインストールされていることが前提となります)
 
 ```bash
 npm run data:all     # data/ を作り直す
@@ -62,7 +57,13 @@ NGリストで不適切な言葉を除外しています。リストの中身は
 鍵は git 管理対象外で、`pipeline/.env` の `NG_KEY` から読みます(`pipeline/ngcrypt.py`)。
 
 ```bash
-npm run ng:edit      # 復号してエディタで開き、保存すると暗号化し直す(そのあと pipeline/ng.enc をコミットする)
+npm run ng:edit      # 復号してエディタで開き、保存すると暗号化し直す(その後 pipeline/ng.enc をコミットする)
+```
+### パッチの当て直し
+
+何らかの理由でパッチ(`vendor/sqlite-vec/int8-cosine.patch`)を変えた場合:
+```bash
+sh vendor/sqlite-vec/build.sh
 ```
 
 ## デプロイ
