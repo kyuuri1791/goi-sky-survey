@@ -39,15 +39,6 @@ function db(): DatabaseSync {
   });
 }
 
-/**
- * ベクトルのファイルを一度読み流しておく
- */
-export async function warmVectors() {
-  for (const f of vectorFiles()) {
-    for await (const chunk of fs.createReadStream(path.join(DIR, f), { highWaterMark: 1 << 20 })) void chunk;
-  }
-}
-
 /** SQL を準備する(同じ SQL は使い回す) */
 export function sql(text: string): StatementSync {
   return once(`sql:${text}`, () => db().prepare(text));
