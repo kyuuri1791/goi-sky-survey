@@ -13,7 +13,7 @@
 
 ### 語のベクトルと近さ
 
-- 単語は [chiVe](https://github.com/WorksApplications/chiVe)のv1.3 mc90(出現回数90回以上の約41万語、300次元ベクトル)を利用している
+- 単語は [chiVe](https://github.com/WorksApplications/chiVe) のv1.3 mc90(出現回数90回以上の約41万語、300次元ベクトル)を利用している
 - 近さはコサイン類似度により算出
 
 ### 平面への配置(`pipeline/layout.py`)
