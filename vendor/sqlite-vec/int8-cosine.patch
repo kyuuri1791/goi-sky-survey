@@ -1,29 +1,25 @@
 --- sqlite-vec.c
 +++ sqlite-vec.c
-@@ -484,17 +484,17 @@ static f32 distance_cosine_int8(const void *pA, const void *pB,
+@@ -484,6 +484,22 @@ static f32 distance_cosine_int8(const void *pA, const void *pB,
    i8 *b = (i8 *)pB;
    size_t d = *((size_t *)pD);
  
--  f32 dot = 0;
--  f32 aMag = 0;
--  f32 bMag = 0;
-+  // goi-sky-survey: 整数で足す(float で順に足すと、コンパイラが SIMD の命令にまとめられない)。
-+  // 127 × 127 × 次元数なので、13 万次元までは int32 に収まる
-+  int32_t dot = 0;
-+  int32_t aMag = 0;
-+  int32_t bMag = 0;
-   for (size_t i = 0; i < d; i++) {
--    dot += *a * *b;
--    aMag += *a * *a;
--    bMag += *b * *b;
--    a++;
--    b++;
-+    dot += (int32_t)a[i] * b[i];
-+    aMag += (int32_t)a[i] * a[i];
-+    bMag += (int32_t)b[i] * b[i];
-   }
--  return 1 - (dot / (sqrt(aMag) * sqrt(bMag)));
-+  return 1 - ((f32)dot / (sqrt((f32)aMag) * sqrt((f32)bMag)));
- }
- 
- // https://github.com/facebookresearch/faiss/blob/77e2e79cd0a680adc343b9840dd865da724c579e/faiss/utils/hamming_distance/common.h#L34
++  // Summing in float must stay in order, which keeps the loop from being
++  // vectorized; int32 sums vectorize and cannot overflow below this bound.
++  if (d <= INT32_MAX / (128 * 128)) {
++    int32_t dot = 0;
++    int32_t aMag = 0;
++    int32_t bMag = 0;
++    for (size_t i = 0; i < d; i++) {
++      dot += *a * *b;
++      aMag += *a * *a;
++      bMag += *b * *b;
++      a++;
++      b++;
++    }
++    return 1 - ((f32)dot / (sqrt((f32)aMag) * sqrt((f32)bMag)));
++  }
++
+   f32 dot = 0;
+   f32 aMag = 0;
+   f32 bMag = 0;
