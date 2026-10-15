@@ -31,7 +31,6 @@
 .titlePart {
   display: inline-block;
 }
-/* タイトルを押しても全体の表示に戻る */
 .titleButton {
   all: unset;
   cursor: pointer;
@@ -42,7 +41,6 @@
   gap: 8px;
   margin-left: auto;
 }
-/* ボタンの all: unset で、帯の pointer-events: none を受け継いでしまうので戻す */
 .nav .navButton {
   pointer-events: auto;
   flex-shrink: 0;
