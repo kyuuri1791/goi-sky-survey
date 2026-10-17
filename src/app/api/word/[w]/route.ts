@@ -1,4 +1,4 @@
-import { CDN_CACHE } from "@/lib/data.ts";
+import { CDN_CACHE, timing } from "@/lib/data.ts";
 import { info, nearest, resolve, wordResult } from "@/lib/words.ts";
 import type { Word } from "@/types.ts";
 
@@ -10,9 +10,12 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/word/[w]">)
   if (!ids) return Response.json({ error: `「${w}」は見つかりませんでした` }, { status: 404 });
   if (ids.length === 1) return Response.json(wordResult(ids[0]), { headers: CDN_CACHE });
   // 複合語は語彙にない点なので、地図上の位置は近い語の位置を近さで重みづけした平均にする(UMAP が新しい点を置くときの最初の位置と同じ考え方)
+  const t0 = performance.now();
   const neighbors = nearest(ids, 8);
+  timing.total = performance.now() - t0;
+  const serverTiming = Object.entries(timing).map(([k, v]) => `${k};dur=${v.toFixed(1)}`).join(", ");
   const total = neighbors.reduce((s, n) => s + n.score!, 0);
   const at = (k: "x" | "y") => Math.round((neighbors.reduce((s, n) => s + n[k] * n.score!, 0) / total) * 1e5) / 1e5;
   const word: Word = { id: -1, text: w.trim(), x: at("x"), y: at("y"), rank: 0, pos: -1 };
-  return Response.json({ composite: ids.map((id) => info(id)), word, neighbors }, { headers: CDN_CACHE });
+  return Response.json({ composite: ids.map((id) => info(id)), word, neighbors }, { headers: { ...CDN_CACHE, "Server-Timing": serverTiming } });
 }

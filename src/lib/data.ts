@@ -62,12 +62,23 @@ const CANDIDATES = 300;
  * (符号だけで決めると、本物の上位 10 語の半分ほどしか当たらない)
  */
 export function nearestVectors(q: Float32Array, k: number): { id: number; score: number }[] {
+  let t = performance.now();
   const rows = sql(`${eachVectors((t) => `select rowid as id, distance from ${t} where cmd = ?1 and arg = ?2`)} order by distance limit ${CANDIDATES}`).all(
     new Uint8Array(q.buffer, q.byteOffset, q.byteLength),
     JSON.stringify({ K: CANDIDATES }),
   ) as { id: number }[];
-  return rows
-    .map(({ id }) => ({ id, score: vectorOf(id).reduce((s, x, d) => s + x * q[d], 0) }))
+  timing.knn = performance.now() - t;
+  t = performance.now();
+  const vecs = rows.map(({ id }) => vectorOf(id));
+  timing.fetch = performance.now() - t;
+  t = performance.now();
+  const out = rows
+    .map(({ id }, i) => ({ id, score: vecs[i].reduce((s, x, d) => s + x * q[d], 0) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, k);
+  timing.rerank = performance.now() - t;
+  return out;
 }
+
+// 一時的: プレビューで時間を測る(Server-Timing に載せる)
+export const timing: Record<string, number> = {};
