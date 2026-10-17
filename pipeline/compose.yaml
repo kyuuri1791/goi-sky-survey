@@ -9,6 +9,7 @@ services:
     volumes:
       - .:/app # コードと ng.enc
       - ../data:/out # 書き出し先
+      - ../vendor/vec1:/vec1:ro # SQLite の vec1 の拡張
       - work:/work # 元データと途中結果(手元のディレクトリを汚さない)
     # 復号した除外語の一覧はここ(メモリ上)にだけ置く
     tmpfs:

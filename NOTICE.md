@@ -1,6 +1,6 @@
 # 第三者のデータとソフトウェアについて
 
-このリポジトリの `data/` にあるファイルは、次のデータをもとに作ったものです。どちらも Apache License, Version 2.0 で提供されています。`vendor/sqlite-vec/` の sqlite-vec も、Apache License, Version 2.0 で利用しています。ライセンスの全文は [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) にあります。
+このリポジトリの `data/` にあるファイルは、次のデータをもとに作ったものです。どちらも Apache License, Version 2.0 で提供されています。ライセンスの全文は [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) にあります。
 
 ## chiVe v1.3(mc90)
 
@@ -10,7 +10,7 @@
 
 使っているファイルと、加えた変更:
 
-- `data/vectors-0.db`、`data/vectors-1.db`: 単語ベクトルを 1 バイト(int8)に丸め、SQLite のファイルにしたもの
+- `data/vectors-*.db`: 単語ベクトルを長さ 1 にそろえ、近い語を探すインデックス(各語を短い符号に縮めたもの)と一緒に SQLite のファイルにしたもの
 - `data/neighbors.db`: 単語ベクトルから計算した、各語の使われ方の近い語
 - `data/words.db`: 単語の表示用の書き方と、ベクトルを 2 次元に写した位置
 
@@ -27,12 +27,9 @@
 
 - `data/words.db`: 辞書の見出しから決めた、各語の表示用の書き方と品詞の大分類、検索用の読みと別の書き方
 
-## sqlite-vec v0.1.9
+## vec1 0.8
 
-- 提供元: <https://github.com/asg017/sqlite-vec>
-- Copyright (c) 2024 Alex Garcia
-- MIT License と Apache License, Version 2.0 のどちらかを選べるもののうち、Apache License, Version 2.0 で利用しています
+- 提供元: <https://sqlite.org/vec1>
+- パブリックドメイン(著作権は放棄されています)
 
-加えた変更:
-
-- `vendor/sqlite-vec/vec0.so`: 1 バイトのベクトルのコサイン類似度を整数で足す形に変えて(`vendor/sqlite-vec/int8-cosine.patch`)ビルドしたもの
+`vendor/vec1/vec1.so` は、`vendor/vec1/build.sh` で vec1.c をそのままビルドしたものです。

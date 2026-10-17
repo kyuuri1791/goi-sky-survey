@@ -27,12 +27,12 @@ const vectorFiles = () => once("vectorFiles", () => fs.readdirSync(DIR).filter((
 
 /**
  * データ(data/*.db。表の形は pipeline/store.py、pipeline/vectors.py)。words.db を開き、近い語とベクトルのファイルをつなぐ。
- * SQLite は使う部分だけファイルから読むので、全部(300MB ほど)をメモリに載せない
+ * SQLite は使う部分だけファイルから読むので、全部(700MB ほど)をメモリに載せない
  */
 function db(): DatabaseSync {
   return once("db", () => {
     const db = new DatabaseSync(path.join(DIR, "words.db"), { readOnly: true, allowExtension: true });
-    db.loadExtension(path.join(process.cwd(), "vendor/sqlite-vec/vec0.so"));
+    db.loadExtension(path.join(process.cwd(), "vendor/vec1/vec1.so"));
     db.prepare("attach ? as neighbors").run(path.join(DIR, "neighbors.db"));
     vectorFiles().forEach((f, i) => db.prepare(`attach ? as vectors${i}`).run(path.join(DIR, f)));
     return db;
@@ -47,17 +47,27 @@ export function sql(text: string): StatementSync {
 /** ベクトルの表ごとに SQL を作り、union all でつなぐ */
 const eachVectors = (make: (table: string) => string) => vectorFiles().map((_, i) => make(`vectors${i}.vectors`)).join(" union all ");
 
-/** 語 id の、1 バイトに丸めたベクトル(語ごとに長さが違う) */
-export function vectorOf(id: number): Int8Array {
-  const { embedding } = sql(eachVectors((t) => `select embedding from ${t} where rowid = ?1`)).get(id) as { embedding: Uint8Array };
-  return new Int8Array(embedding.buffer, embedding.byteOffset, embedding.length);
+/** 語 id の、長さ 1 のベクトル */
+export function vectorOf(id: number): Float32Array {
+  const { vector } = sql(eachVectors((t) => `select vector from ${t} where rowid = ?1`)).get(id) as { vector: Uint8Array };
+  return new Float32Array(vector.slice().buffer);
 }
 
-/** 1 バイトに丸めた q と cos で比べて、近い順に上位 k 語(sqlite-vec で全部の語と比べる)。score は cos 類似度 */
-export function nearestVectors(q: Int8Array, k: number): { id: number; score: number }[] {
-  const rows = sql(`${eachVectors((t) => `select rowid as id, distance from ${t} where embedding match vec_int8(?1) and k = ?2`)} order by distance limit ?2`).all(
-    new Uint8Array(q.buffer, q.byteOffset, q.length),
-    k,
-  ) as { id: number; distance: number }[];
-  return rows.map(({ id, distance }) => ({ id, score: 1 - distance }));
+/** vec1 で各ファイルから取る候補の数と、その中から比べ直す数(pipeline/bench.py の CANDIDATES と同じにする) */
+const CANDIDATES = 300;
+
+/**
+ * 長さ 1 の q と cos で比べて、近い順に上位 k 語。score は cos 類似度。
+ * vec1 で各ファイルから縮めた符号で近い候補を取り、近い方から CANDIDATES 語を丸めないベクトルで比べ直す
+ * (符号だけで決めると、本物の上位 10 語の半分ほどしか当たらない)
+ */
+export function nearestVectors(q: Float32Array, k: number): { id: number; score: number }[] {
+  const rows = sql(`${eachVectors((t) => `select rowid as id, distance from ${t} where cmd = ?1 and arg = ?2`)} order by distance limit ${CANDIDATES}`).all(
+    new Uint8Array(q.buffer, q.byteOffset, q.byteLength),
+    JSON.stringify({ K: CANDIDATES }),
+  ) as { id: number }[];
+  return rows
+    .map(({ id }) => ({ id, score: vectorOf(id).reduce((s, x, d) => s + x * q[d], 0) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k);
 }

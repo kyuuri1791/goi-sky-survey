@@ -1,53 +1,58 @@
-"""各語のベクトルを 1 バイトに丸めて、sqlite-vec の表に書き出す(読む側は src/lib/data.ts)。複合語の検索で、
-分けた語のベクトルを取り出して足し、それに使われ方の近い語を全部の語と比べて探すのに使う。
+"""各語のベクトルを、SQLite の vec1 の表に書き出す(読む側は src/lib/data.ts)。複合語の検索で、
+分けた語のベクトルを取り出して足し、それに使われ方の近い語を探すのに使う。
 
-  vectors-*.db  表 vectors(rowid = 語の番号、embedding = int8[300]、近さは cos)。
-                GitHub の 1 ファイル 100MB の上限より小さくなるよう、前半と後半に分ける
+  vectors-*.db  表 vectors(rowid = 語の番号、vector = 長さ 1 の float32[300])。
+                vec1 は各語を短い符号に縮めたインデックスで近い候補を探す(近さは cos)。
+                GitHub の 1 ファイル 100MB の上限より小さくなるよう、語の番号の順に分ける
 """
 
 import sqlite3
 from pathlib import Path
 
 import numpy as np
-import sqlite_vec
 
-FILES = 2
-
-
-def quantize(vecs: np.ndarray) -> np.ndarray:
-    """語ごとに、一番大きい成分が 127 になるよう伸ばして丸める(cos で比べるので、語ごとの倍率は捨ててよい)"""
-    scale = np.abs(vecs).max(axis=1, keepdims=True) / 127
-    scale[scale == 0] = 1
-    return np.round(vecs / scale).astype(np.int8)
+FILES = 6
+VEC1 = "/vec1/vec1.so"
+# 学習の設定(各語を 32 バイトの符号に縮める。語をグループに分けて一部だけ探す方式は、当たりが下がるので使わない)
+TRAIN = '{"distance":"cos","quantizer":"opq","codesize":32,"nbucket":0,"nthread":8}'
 
 
-def connect(path: Path) -> sqlite3.Connection:
+def connect(path: Path | str) -> sqlite3.Connection:
     db = sqlite3.connect(path)
     db.enable_load_extension(True)
-    sqlite_vec.load(db)
+    db.load_extension(VEC1)
     return db
 
 
 def write(out: Path, vecs: np.ndarray) -> None:
-    q = quantize(vecs)
-    per = -(-len(q) // FILES)
-    for i in range(FILES):
-        path = out / f"vectors-{i}.db"
+    v = np.ascontiguousarray(vecs, np.float32)
+    per = -(-len(v) // FILES)
+    paths = [out / f"vectors-{i}.db" for i in range(FILES)]
+    for i, path in enumerate(paths):
         path.unlink(missing_ok=True)
         db = connect(path)
-        db.execute(f"create virtual table vectors using vec0(embedding int8[{q.shape[1]}] distance_metric=cosine)")
-        ids = range(i * per, min((i + 1) * per, len(q)))
-        db.executemany("insert into vectors(rowid, embedding) values (?, vec_int8(?))", ((j, q[j].tobytes()) for j in ids))
+        db.execute("create virtual table vectors using vec1(vector)")
+        db.executemany("insert into vectors(rowid, vector) values (?, ?)", ((j, v[j].tobytes()) for j in range(i * per, min((i + 1) * per, len(v)))))
+        db.commit()
+        db.close()
+    # 学習は全部の語で 1 回だけ行い、各ファイルの表に同じ学習結果でインデックスを作る
+    db = connect(":memory:")
+    for i, path in enumerate(paths):
+        db.execute(f"attach ? as v{i}", (str(path),))
+    rows = " union all ".join(f"select vector from v{i}.vectors" for i in range(FILES))
+    model = db.execute(f"select vec1_train(vector, ?) from ({rows})", (TRAIN,)).fetchone()[0]
+    db.close()
+    for path in paths:
+        db = connect(path)
+        db.execute("insert into vectors(cmd, vector) values ('rebuild', ?)", (model,))
         db.commit()
         db.execute("vacuum")
         db.close()
 
 
-def read(out: Path) -> np.ndarray:
-    """書き出したベクトルを語の番号の順に戻す"""
-    parts = []
+def open_all(out: Path) -> sqlite3.Connection:
+    """書き出したファイルを全部つないで開く(表は v0.vectors、v1.vectors、…)"""
+    db = connect(":memory:")
     for i in range(FILES):
-        db = connect(out / f"vectors-{i}.db")
-        parts += [np.frombuffer(e, np.int8) for _, e in db.execute("select rowid, embedding from vectors order by rowid")]
-        db.close()
-    return np.stack(parts)
+        db.execute(f"attach ? as v{i}", (str(out / f"vectors-{i}.db"),))
+    return db

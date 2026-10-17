@@ -4,13 +4,13 @@
   2. 表示する語を選ぶ(載せない言葉は ng.enc を復号してメモリ上で使う)
   3. 表示用の書き方・品詞・検索用の別名を決める
   4. UMAP で 2 次元に並べる
-  5. 各語のベクトルを 1 バイトに丸めて書き出す
+  5. 各語のベクトルを、近い語を探すインデックスと一緒に書き出す
   6. 全部の語の近い語を計算する
   7. /out(= data/)に words.db、neighbors.db、vectors-*.db を書き出す
 
   python -m build             全部作る
   python -m build meta        書き方・品詞・別名だけ作り直す(配置は今の data/words.db のまま)
-  python -m build vectors     1 バイトに丸めたベクトルだけ作り直す(配置は変えない)
+  python -m build vectors     ベクトルだけ作り直す(配置は変えない)
   python -m build neighbors   近い語の表だけ作り直す(配置は変えない)
 """
 

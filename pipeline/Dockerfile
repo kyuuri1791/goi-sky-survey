@@ -1,4 +1,4 @@
-# データを作るための環境(Python と、FAISS・UMAP・sqlite-vec などのライブラリ)。コードはイメージに入れず、compose でマウントする
+# データを作るための環境(Python と、FAISS・UMAP などのライブラリ)。コードはイメージに入れず、compose でマウントする
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends vim-tiny && rm -rf /var/lib/apt/lists/*

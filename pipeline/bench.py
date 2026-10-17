@@ -1,6 +1,6 @@
 """複合語の検索で、全部と比べた本物の上位 10 語をどれだけ当てられるか(再現率)を測る。npm run data:bench から compose 経由で呼ぶ。
-アプリ(src/lib/words.ts)と同じ手順をなぞる: 分けた語の 1 バイトに丸めたベクトル(data/vectors-*.db)を長さ 1 にそろえて足し、
-1 バイトに丸め直して、全部の語と cos で比べる。"""
+アプリ(src/lib/data.ts の nearestVectors)と同じ手順をなぞる: 分けた語のベクトルを足して長さ 1 にし、vec1 で各ファイルから
+CANDIDATES 語ずつ候補を取り、縮めた符号で近い方から CANDIDATES 語を、丸めないベクトルで比べ直す。"""
 
 from pathlib import Path
 
@@ -12,6 +12,8 @@ import vectors
 from vocab import kept_ids
 
 K, QUERIES = 10, 200
+# src/lib/data.ts の CANDIDATES と同じにする
+CANDIDATES = 300
 
 
 def unit(v: np.ndarray) -> np.ndarray:
@@ -21,21 +23,22 @@ def unit(v: np.ndarray) -> np.ndarray:
 def main():
     words, vecs = sources.chive()
     vecs = vecs[kept_ids(words, ngcrypt.words())]
-    q8 = vectors.read(Path("/out")).astype(np.float32)
-    q8n = unit(q8)
+    db = vectors.open_all(Path("/out"))
+    rows = " union all ".join(f"select rowid, distance from v{i}.vectors where cmd = ?1 and arg = ?2" for i in range(vectors.FILES))
+    knn = f"{rows} order by distance limit {CANDIDATES}"
+    arg = f'{{"K":{CANDIDATES}}}'
     # よく使われる 3 万語から 2 語ずつ選んで足したものを問い合わせにする
     rng = np.random.default_rng(5)
     pairs = [p for p in rng.choice(30_000, (QUERIES, 2)) if p[0] != p[1]]
     hit = 0
     for p in pairs:
-        s = vecs @ unit(vecs[p].sum(0))
+        q = unit(vecs[p].sum(0)).astype(np.float32)
+        s = vecs @ q
         s[p] = -9
         truth = set(np.argsort(-s)[:K])
-        q = q8n[p].sum(0)
-        q = np.round(q / np.abs(q).max() * 127)
-        s8 = q8n @ unit(q)
-        s8[p] = -9
-        hit += len(truth & set(np.argsort(-s8)[:K]))
+        cand = np.array([r for r, _ in db.execute(knn, (q.tobytes(), arg)) if r not in p])
+        got = cand[np.argsort(-(vecs[cand] @ q))[:K]]
+        hit += len(truth & set(got))
     print(f"本物の上位 {K} 語を当てた割合: {hit / (K * len(pairs)):.1%}")
 
 

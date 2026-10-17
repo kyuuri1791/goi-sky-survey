@@ -58,18 +58,14 @@ export function wordResult(id: number): WordResult {
 
 /**
  * 語の列 ids(複合語を分けた語)のベクトルを足し合わせた意味に、使われ方の近い語。ids は除く。
- * 1 バイトに丸めたベクトルは語ごとに長さが違うので、長さ 1 にそろえてから足し、1 バイトに丸め直して全部の語と比べる
+ * 各語のベクトルは長さ 1 なので、そのまま足して長さ 1 にそろえる
  */
 export function nearest(ids: number[], k: number): Word[] {
   const parts = ids.map(vectorOf);
   const sum = new Float32Array(parts[0].length);
-  for (const v of parts) {
-    const len = Math.hypot(...v);
-    v.forEach((x, d) => (sum[d] += x / len));
-  }
-  const max = Math.max(...sum.map(Math.abs));
-  const q = Int8Array.from(sum, (x) => Math.round((x / max) * 127));
-  return nearestVectors(q, k + ids.length)
+  for (const v of parts) v.forEach((x, d) => (sum[d] += x));
+  const len = Math.hypot(...sum);
+  return nearestVectors(sum.map((x) => x / len), k + ids.length)
     .filter((h) => !ids.includes(h.id))
     .slice(0, k)
     .map((h) => info(h.id, h.score));
