@@ -80,6 +80,7 @@
     width: auto;
     top: auto;
     bottom: 74px;
-    max-height: 40dvh;
+    max-height: 25dvh;
+    overscroll-behavior: contain;
   }
 }

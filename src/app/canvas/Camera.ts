@@ -58,7 +58,7 @@ export class Camera implements View {
   /**
    * 語を選んだときに見せる、画面のうち隠れていない範囲(中心と幅・高さ)。
    * PC では上の見出しと分野のボタン(90px ほど)、右のパネル(300px ほど)、左下の凡例の列(220px ほど)、下の検索欄(80px ほど)を、
-   * スマホ(幅 640px 以下)では上の見出しと分野のボタン(130px ほど)と、下の 4 割ほどのパネルを除く。withPanel が false なら(パネルを出さないとき)、パネルの分は除かない
+   * スマホ(幅 640px 以下)では上の見出しと分野のボタン(130px ほど)と、下の 4 分の 1 ほどのパネルを除く。withPanel が false なら(パネルを出さないとき)、パネルの分は除かない
    */
   freeArea(withPanel = true) {
     const { w: W, h: H } = this;
@@ -66,7 +66,7 @@ export class Camera implements View {
       const left = 220, right = W - (withPanel ? 300 : 24), top = 90, bottom = H - 80;
       return { cx: (left + right) / 2, cy: (top + bottom) / 2, w: right - left, h: bottom - top };
     }
-    const top = 130, bottom = H - 74 - (withPanel ? H * 0.4 : 0);
+    const top = 130, bottom = H - 74 - (withPanel ? H * 0.25 : 0);
     return { cx: W / 2, cy: (top + bottom) / 2, w: W, h: bottom - top };
   }
 
